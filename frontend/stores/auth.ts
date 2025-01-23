@@ -1,6 +1,7 @@
 // store/auth.ts
-import { ActionTree, MutationTree } from 'vuex';
-import { AuthState, User, LoginCredentials, LoginResponse } from '~/types/auth';
+import type { ActionTree, MutationTree } from 'vuex';
+import { useApi } from '~/compasobles/useApi';
+import type { AuthState, User, LoginCredentials, LoginResponse } from '~/types/auth';
 
 export const state = (): AuthState => ({
   user: null,
