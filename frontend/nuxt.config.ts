@@ -1,7 +1,7 @@
 // nuxt.config.ts
 export default defineNuxtConfig({
   modules: ['@nuxtjs/tailwindcss', '@nuxt/ui'],
-
+  css: ['@/assets/global.css'],
   runtimeConfig: {
     public: {
       apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:3001',
@@ -17,7 +17,5 @@ export default defineNuxtConfig({
       meta: [{ charset: 'utf-8' }, { name: 'viewport', content: 'width=device-width, initial-scale=1' }],
     },
   },
-
-  devtools: { enabled: true },
   compatibilityDate: '2025-01-16',
 });

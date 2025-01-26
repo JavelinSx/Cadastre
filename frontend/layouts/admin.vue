@@ -1,6 +1,10 @@
 <template>
-    <div>admin</div>
+    <AdminMenu />
+    <main>
+        <slot></slot>
+    </main>
 </template>
 <script setup lang="ts">
-// Здесь будет логика компонента
+import AdminMenu from '~/components/Navigation/menus/AdminMenu.vue';
+
 </script>
