@@ -54,7 +54,7 @@
 
                         <!-- Авторизованное меню -->
                         <template v-if="sessionStore.isAuthenticated">
-                            <div class="flex flex-col items-center w-full gap-3" v-if="userStore.isClient">
+                            <div class="flex flex-col items-center w-full gap-3" v-if="clientStore.isClient">
                                 <UButton v-for="item in clientMenuItems" :key="item.path" :to="item.path" block
                                     variant="ghost" color="gray" class="text-lg w-full flex items-center"
                                     @click="isOpen = false">
@@ -64,7 +64,7 @@
                                 </UButton>
                             </div>
 
-                            <div class="flex flex-col items-center w-full gap-3" v-if="userStore.isAdmin">
+                            <div class="flex flex-col items-center w-full gap-3" v-if="adminStore.isAdmin">
                                 <UButton v-for="item in adminMenuItems" :key="item.path" :to="item.path" block
                                     variant="ghost" color="gray" class="text-lg w-full flex items-center"
                                     @click="isOpen = false">
@@ -115,13 +115,17 @@ import ThemeSwitcher from '~/components/Theme/ThemeSwitcher.vue'
 import NavigationLogo from './NavigationLogo.vue'
 import { ref } from 'vue'
 import { useSessionStore } from '~/stores/auth/session'
-import { useUserStore } from '~/stores/auth/user'
+
 import { useAuthStore } from '~/stores/auth/'
 import type { MenuItem } from '~/types/menu'
+import { useClientStore } from '~/stores/auth/client'
+import { useAdminStore } from '~/stores/auth/admin'
 
 const sessionStore = useSessionStore()
-const userStore = useUserStore()
+
 const authStore = useAuthStore()
+const clientStore = useClientStore()
+const adminStore = useAdminStore()
 const isOpen = ref(false)
 
 const mainMenuItems: MenuItem[] = [

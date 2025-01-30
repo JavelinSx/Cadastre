@@ -23,7 +23,7 @@ import NavigationMainMenu from './NavigationMainMenu.vue'
 import NavigationUserMenu from './NavigationUserMenu.vue'
 import NavigationMobileMenu from './NavigationMobileMenu.vue'
 import { useSessionStore } from '~/stores/auth/session'
-import { useUserStore } from '~/stores/auth/user'
+import { useUserStore } from '~/stores/auth/client'
 
 
 const sessionStore = useSessionStore()

@@ -1,68 +1,97 @@
 // stores/auth/index.ts
 import { defineStore } from 'pinia';
+import type { APIResponse } from '~/types/api';
+import type { AuthState, LoginCredentials, AuthenticatedEntity, LoginResponse, AuthError } from '~/types/auth';
 import { useSessionStore } from './session';
-import { useUserStore } from './user';
-import type { User } from './types';
-
-interface LoginCredentials {
-  email: string;
-  password: string;
-}
+import { useClientStore } from './client';
+import { useAdminStore } from './admin';
 
 export const useAuthStore = defineStore('auth', {
-  state: () => ({
+  state: (): AuthState => ({
+    entity: null,
+    token: null,
+    isAuthenticated: false,
     loading: false,
-    error: null as string | null,
+    error: null,
   }),
+
+  getters: {
+    isAdmin: (state) => state.entity?.type === 'admin',
+    isUser: (state) => state.entity?.type === 'user',
+  },
 
   actions: {
     async login(credentials: LoginCredentials) {
       const sessionStore = useSessionStore();
-      const userStore = useUserStore();
+      const clientStore = useClientStore();
+      const adminStore = useAdminStore();
+      const { fetchApi } = useApi();
 
       this.loading = true;
       this.error = null;
 
       try {
-        // Имитация API запроса
-        const response = await fetch('/api/login', {
+        const { data } = await fetchApi<LoginResponse>('/api/auth/login', {
           method: 'POST',
-          body: JSON.stringify(credentials),
+          body: credentials,
         });
 
-        if (!response.ok) throw new Error('Login failed');
+        this.setAuth(data);
+        sessionStore.setSession(data.access_token);
 
-        const { token, user } = await response.json();
+        // Set data in appropriate store based on entity type
+        if (data.entity.type === 'admin') {
+          adminStore.setAdmin(data.entity);
+        } else {
+          clientStore.setClient(data.entity);
+        }
 
-        sessionStore.setSession(token);
-        userStore.setUser(user);
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : 'Unknown error';
-        throw err;
+        return data;
+      } catch (error: any) {
+        this.error = this.handleError(error);
+        throw error;
       } finally {
         this.loading = false;
       }
     },
 
+    setAuth(data: LoginResponse) {
+      this.token = data.access_token;
+      this.entity = data.entity;
+      this.isAuthenticated = true;
+    },
+
+    clearAuth() {
+      this.token = null;
+      this.entity = null;
+      this.isAuthenticated = false;
+      this.error = null;
+    },
+
+    handleError(error: any): AuthError {
+      if (error.response?.status === 401) {
+        return 'INVALID_CREDENTIALS';
+      }
+      if (error.message === 'Network Error') {
+        return 'NETWORK_ERROR';
+      }
+      if (error.response?.status >= 500) {
+        return 'SERVER_ERROR';
+      }
+      return 'UNKNOWN_ERROR';
+    },
+
     async logout() {
       const sessionStore = useSessionStore();
-      const userStore = useUserStore();
+      const clientStore = useClientStore();
+      const adminStore = useAdminStore();
 
-      this.loading = true;
+      this.clearAuth();
+      sessionStore.clearSession();
 
-      try {
-        // Имитация API запроса
-        await fetch('/api/logout', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${sessionStore.token}`,
-          },
-        });
-      } finally {
-        sessionStore.clearSession();
-        userStore.clearUser();
-        this.loading = false;
-      }
+      // Clear both stores to be safe
+      clientStore.clearClient();
+      adminStore.clearAdmin();
     },
   },
 });

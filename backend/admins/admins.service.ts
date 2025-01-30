@@ -22,4 +22,8 @@ export class AdminsService {
   async findByName(name: string): Promise<Admin> {
     return this.adminModel.findOne({ name }).exec();
   }
+
+  async findById(id: string): Promise<Admin> {
+    return this.adminModel.findById(id).exec();
+  }
 }
