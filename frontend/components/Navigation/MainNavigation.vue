@@ -1,31 +1,31 @@
-# components/navigation/MainNavigation.vue
+// components/navigation/MainNavigation.vue
 <template>
-    <UHeader class="border-b">
+    <header class="border-b">
         <nav>
-            <div class="container mx-auto flex justify-between py-2">
-                <!-- Логотип и основное меню -->
+            <div class="container mx-auto flex justify-between py-2 gap-4">
                 <div class="flex items-center gap-4">
                     <NavigationLogo />
                     <NavigationMainMenu />
                 </div>
 
-                <!-- Правая часть навигации -->
                 <div class="flex items-center gap-4">
-                    <NavigationUserMenu :is-authenticated="isAuthenticated" :user-role="userRole"
-                        @logout="handleLogout" />
-                    <NavigationMobileMenu class="md:hidden" />
+                    <NavigationUserMenu />
+                    <NavigationMobileMenu />
                 </div>
             </div>
         </nav>
-    </UHeader>
+    </header>
 </template>
 
-<script setup>
-const isAuthenticated = ref(false)
-const userRole = ref('client')
+<script setup lang="ts">
+import NavigationLogo from './NavigationLogo.vue'
+import NavigationMainMenu from './NavigationMainMenu.vue'
+import NavigationUserMenu from './NavigationUserMenu.vue'
+import NavigationMobileMenu from './NavigationMobileMenu.vue'
+import { useSessionStore } from '~/stores/auth/session'
+import { useUserStore } from '~/stores/auth/user'
 
-const handleLogout = () => {
-    // TODO: Implement logout logic
-    console.log('Logout clicked')
-}
+
+const sessionStore = useSessionStore()
+const userStore = useUserStore()
 </script>

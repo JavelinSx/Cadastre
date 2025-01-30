@@ -1,8 +1,8 @@
 # components/navigation/menus/ClientMenu.vue
 <template>
-    <div class="flex items-center space-x-4">
-        <UButton v-for="item in menuItems" :key="item.path" :to="item.path" variant="ghost" color="gray">
-            <UIcon :name="item.icon" class="mr-1" />
+    <div class="flex items-center space-x-2">
+        <UButton class="text-sm md:text-lg" v-for="item in menuItems" :key="item.path" :to="item.path" variant="ghost"
+            color="gray">
             {{ item.label }}
         </UButton>
     </div>
@@ -13,17 +13,14 @@ const menuItems = [
     {
         label: 'Личный кабинет',
         path: '/dashboard',
-        icon: 'i-heroicons-home'
     },
     {
-        label: 'Мои заказы',
+        label: 'Заказы',
         path: '/orders',
-        icon: 'i-heroicons-document-text'
     },
     {
-        label: 'Чат с поддержкой',
+        label: 'Поддержка',
         path: '/chat',
-        icon: 'i-heroicons-chat-bubble-left'
     }
 ]
 </script>
