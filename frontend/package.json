@@ -21,7 +21,8 @@
     "pinia": "^2.3.1",
     "vue": "latest",
     "vue-router": "latest",
-    "vuex": "^4.1.0"
+    "vuex": "^4.1.0",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.20",

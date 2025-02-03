@@ -11,47 +11,51 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __rest = (this && this.__rest) || function (s, e) {
-    var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-        t[p] = s[p];
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
-            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
-                t[p[i]] = s[p[i]];
-        }
-    return t;
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminsController = void 0;
 const common_1 = require("@nestjs/common");
 const admins_service_1 = require("./admins.service");
 const create_admin_dto_1 = require("./dto/create-admin.dto");
-const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const admin_auth_guard_1 = require("../guards/admin-auth.guard");
+const login_dto_1 = require("../auth/dto/login.dto");
 let AdminsController = class AdminsController {
     constructor(adminsService) {
         this.adminsService = adminsService;
+    }
+    async login(loginDto) {
+        const user = await this.authService.validateUser(loginDto.login, loginDto.password);
+        if (!user) {
+            throw new common_1.UnauthorizedException('Неверные учетные данные');
+        }
+        return this.authService.login(user);
     }
     async create(createAdminDto) {
         return this.adminsService.create(createAdminDto);
     }
     async getProfile(req) {
-        const admin = await this.adminsService.findByName(req.admin.name);
-        const { password } = admin, result = __rest(admin, ["password"]);
-        return result;
+        return this.adminsService.findByName(req.user.name);
     }
 };
 exports.AdminsController = AdminsController;
 __decorate([
+    (0, common_1.Post)('login'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [login_dto_1.LoginDto]),
+    __metadata("design:returntype", Promise)
+], AdminsController.prototype, "login", null);
+__decorate([
     (0, common_1.Post)(),
+    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [create_admin_dto_1.CreateAdminDto]),
     __metadata("design:returntype", Promise)
 ], AdminsController.prototype, "create", null);
 __decorate([
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Get)('profile'),
+    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard),
     __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),

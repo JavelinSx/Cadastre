@@ -21,18 +21,21 @@ exports.AppModule = AppModule = __decorate([
         imports: [
             config_1.ConfigModule.forRoot({
                 isGlobal: true,
+                envFilePath: '.env',
             }),
             mongoose_1.MongooseModule.forRootAsync({
                 imports: [config_1.ConfigModule],
+                inject: [config_1.ConfigService],
                 useFactory: async (configService) => ({
                     uri: configService.get('MONGODB_URI'),
                 }),
-                inject: [config_1.ConfigService],
             }),
             auth_module_1.AuthModule,
             users_module_1.UsersModule,
             admins_module_1.AdminsModule,
         ],
+        controllers: [],
+        providers: [],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

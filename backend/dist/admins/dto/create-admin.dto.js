@@ -12,19 +12,23 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateAdminDto = void 0;
 const class_validator_1 = require("class-validator");
 class CreateAdminDto {
-    constructor() {
-        this.role = 'admin';
-    }
 }
 exports.CreateAdminDto = CreateAdminDto;
 __decorate([
-    (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MinLength)(3),
+    (0, class_validator_1.MaxLength)(50),
+    (0, class_validator_1.Matches)(/^[a-zA-Z0-9_-]*$/, {
+        message: 'Username can only contain letters, numbers, underscores and dashes',
+    }),
     __metadata("design:type", String)
 ], CreateAdminDto.prototype, "name", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.MinLength)(10),
+    (0, class_validator_1.Matches)(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{10,}$/, {
+        message: 'Password must contain at least one letter and one number',
+    }),
     __metadata("design:type", String)
 ], CreateAdminDto.prototype, "password", void 0);
 //# sourceMappingURL=create-admin.dto.js.map

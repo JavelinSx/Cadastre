@@ -15,6 +15,8 @@ export class AuthController {
       throw new UnauthorizedException('Неверные учетные данные');
     }
 
-    return this.authService.login(user);
+    const result = await this.authService.login(user);
+
+    return result;
   }
 }

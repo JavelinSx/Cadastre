@@ -30,6 +30,12 @@ let UsersService = class UsersService {
     async findByEmail(email) {
         return this.userModel.findOne({ email }).exec();
     }
+    async findById(id) {
+        return this.userModel.findById(id).exec();
+    }
+    async findByPhone(phone) {
+        return this.userModel.findOne({ phone }).exec();
+    }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([

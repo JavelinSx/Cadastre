@@ -5,9 +5,8 @@ export declare class UsersController {
     constructor(usersService: UsersService);
     create(createUserDto: CreateUserDto): Promise<import("./schemas/user.schema").User>;
     getProfile(req: any): Promise<{
-        name: string;
-        email: string;
-        phone: string;
+        email?: string;
+        phone?: string;
         role: string;
     }>;
 }

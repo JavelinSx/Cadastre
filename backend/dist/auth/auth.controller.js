@@ -21,11 +21,12 @@ let AuthController = class AuthController {
         this.authService = authService;
     }
     async login(loginDto) {
-        const user = await this.authService.validateUser(loginDto.email, loginDto.password);
+        const user = await this.authService.validateUser(loginDto.login, loginDto.password);
         if (!user) {
-            throw new common_1.UnauthorizedException('Invalid credentials');
+            throw new common_1.UnauthorizedException('Неверные учетные данные');
         }
-        return this.authService.login(user);
+        const result = await this.authService.login(user);
+        return result;
     }
 };
 exports.AuthController = AuthController;

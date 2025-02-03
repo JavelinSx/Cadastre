@@ -30,6 +30,9 @@ let AdminsService = class AdminsService {
     async findByName(name) {
         return this.adminModel.findOne({ name }).exec();
     }
+    async findById(id) {
+        return this.adminModel.findById(id).exec();
+    }
 };
 exports.AdminsService = AdminsService;
 exports.AdminsService = AdminsService = __decorate([

@@ -2,9 +2,12 @@
 export default defineNuxtConfig({
   modules: ['@nuxtjs/tailwindcss', '@nuxt/ui', '@pinia/nuxt'],
   css: ['@/assets/global.css'],
+  devServer: {
+    port: 3000
+  },
   runtimeConfig: {
     public: {
-      apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:3001',
+      apiBaseUrl: 'http://localhost:3001',
     },
   },
   tailwindcss: {

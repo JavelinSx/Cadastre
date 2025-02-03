@@ -24,30 +24,69 @@ exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const users_service_1 = require("../users/users.service");
+const admins_service_1 = require("../admins/admins.service");
 const bcrypt = require("bcrypt");
 let AuthService = class AuthService {
-    constructor(usersService, jwtService) {
+    constructor(usersService, adminsService, jwtService) {
         this.usersService = usersService;
+        this.adminsService = adminsService;
         this.jwtService = jwtService;
     }
-    async validateUser(email, password) {
-        const user = await this.usersService.findByEmail(email);
-        if (user && (await bcrypt.compare(password, user.password))) {
-            const { password } = user, result = __rest(user, ["password"]);
-            return result;
+    isEmail(login) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(login);
+    }
+    isPhone(login) {
+        return /^\+?[\d\s-]{10,}$/.test(login);
+    }
+    async validateUser(login, password) {
+        if (this.isEmail(login)) {
+            const user = await this.usersService.findByEmail(login);
+            if (user && (await bcrypt.compare(password, user.password))) {
+                const { password } = user, result = __rest(user, ["password"]);
+                return Object.assign(Object.assign({}, result), { type: 'user' });
+            }
+        }
+        else if (this.isPhone(login)) {
+            const user = await this.usersService.findByPhone(login);
+            if (user && (await bcrypt.compare(password, user.password))) {
+                const { password } = user, result = __rest(user, ["password"]);
+                return Object.assign(Object.assign({}, result), { type: 'user' });
+            }
+        }
+        else {
+            const admin = await this.adminsService.findByName(login);
+            if (admin && (await bcrypt.compare(password, admin.password))) {
+                const { password } = admin, result = __rest(admin, ["password"]);
+                return Object.assign(Object.assign({}, result), { type: 'admin' });
+            }
         }
         return null;
     }
-    async login(user) {
-        const payload = { email: user.email, sub: user._id, role: user.role };
-        return {
-            access_token: this.jwtService.sign(payload),
+    async login(entity) {
+        var _a, _b;
+        const userId = ((_a = entity._doc) === null || _a === void 0 ? void 0 : _a._id) || entity._id;
+        const userName = ((_b = entity._doc) === null || _b === void 0 ? void 0 : _b.name) || entity.name;
+        const payload = {
+            sub: userId,
+            name: userName,
+            type: 'admin',
         };
+        const result = {
+            access_token: this.jwtService.sign(payload),
+            entity: {
+                id: userId.toString(),
+                type: 'admin',
+                name: userName,
+            },
+        };
+        return result;
     }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [users_service_1.UsersService, jwt_1.JwtService])
+    __metadata("design:paramtypes", [users_service_1.UsersService,
+        admins_service_1.AdminsService,
+        jwt_1.JwtService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

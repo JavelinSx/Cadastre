@@ -6,6 +6,19 @@ import { useSessionStore } from './session';
 import { useClientStore } from './client';
 import { useAdminStore } from './admin';
 
+export const handleError = (error: any): AuthError => {
+  if (error.response?.status === 401) {
+    return 'INVALID_CREDENTIALS';
+  }
+  if (error.message === 'Network Error') {
+    return 'NETWORK_ERROR';
+  }
+  if (error.response?.status >= 500) {
+    return 'SERVER_ERROR';
+  }
+  return 'UNKNOWN_ERROR';
+};
+
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
     entity: null,
@@ -25,30 +38,40 @@ export const useAuthStore = defineStore('auth', {
       const sessionStore = useSessionStore();
       const clientStore = useClientStore();
       const adminStore = useAdminStore();
-      const { fetchApi } = useApi();
+      const { fetchApi, setAuthToken } = useApi();
 
       this.loading = true;
       this.error = null;
 
       try {
-        const { data } = await fetchApi<LoginResponse>('/api/auth/login', {
+        // Теперь response содержит данные напрямую
+        const response = await fetchApi<LoginResponse>('/api/auth/login', {
           method: 'POST',
           body: credentials,
         });
 
-        this.setAuth(data);
-        sessionStore.setSession(data.access_token);
+        console.log('Login response:', response); // Для отладки
 
-        // Set data in appropriate store based on entity type
-        if (data.entity.type === 'admin') {
-          adminStore.setAdmin(data.entity);
-        } else {
-          clientStore.setClient(data.entity);
+        if (!response || !response.access_token) {
+          throw new Error('Invalid response from server');
         }
 
-        return data;
+        if (!import.meta.server) {
+          setAuthToken(response.access_token);
+        }
+
+        this.setAuth(response);
+        sessionStore.setSession(response.access_token);
+
+        if (response.entity.type === 'admin') {
+          adminStore.setAdmin(response.entity);
+        } else {
+          clientStore.setClient(response.entity);
+        }
+
+        return response;
       } catch (error: any) {
-        this.error = this.handleError(error);
+        this.error = handleError(error);
         throw error;
       } finally {
         this.loading = false;
@@ -62,23 +85,12 @@ export const useAuthStore = defineStore('auth', {
     },
 
     clearAuth() {
+      const { clearAuthToken } = useApi();
       this.token = null;
       this.entity = null;
       this.isAuthenticated = false;
       this.error = null;
-    },
-
-    handleError(error: any): AuthError {
-      if (error.response?.status === 401) {
-        return 'INVALID_CREDENTIALS';
-      }
-      if (error.message === 'Network Error') {
-        return 'NETWORK_ERROR';
-      }
-      if (error.response?.status >= 500) {
-        return 'SERVER_ERROR';
-      }
-      return 'UNKNOWN_ERROR';
+      clearAuthToken(); // Clear token from localStorage
     },
 
     async logout() {
@@ -88,10 +100,24 @@ export const useAuthStore = defineStore('auth', {
 
       this.clearAuth();
       sessionStore.clearSession();
-
-      // Clear both stores to be safe
       clientStore.clearClient();
       adminStore.clearAdmin();
+    },
+
+    // Add initialization action
+    async initializeAuth() {
+      const { getAuthToken } = useApi();
+      const token = getAuthToken();
+
+      if (token) {
+        const sessionStore = useSessionStore();
+        sessionStore.setSession(token);
+        this.token = token;
+        this.isAuthenticated = true;
+
+        // Optionally fetch user profile here to restore entity data
+        // await this.fetchProfile();
+      }
     },
   },
 });

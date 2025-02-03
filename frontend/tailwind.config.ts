@@ -9,6 +9,7 @@ export default <Config>{
     './plugins/**/*.{js,ts}',
     './app.vue',
     './error.vue',
+    './node_modules/@nuxt/ui/**/*.{vue,js,ts}',
   ],
   darkMode: 'class', // Включаем переключение тем через классы
   theme: {

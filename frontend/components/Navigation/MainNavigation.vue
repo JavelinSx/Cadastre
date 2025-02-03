@@ -1,4 +1,4 @@
-// components/navigation/MainNavigation.vue
+# components/navigation/MainNavigation.vue
 <template>
     <header class="border-b">
         <nav>
@@ -8,10 +8,23 @@
                     <NavigationMainMenu />
                 </div>
 
-                <div class="flex items-center gap-4">
-                    <NavigationUserMenu />
-                    <NavigationMobileMenu />
-                </div>
+                <ClientOnly>
+                    <div class="flex items-center gap-4">
+                        <NavigationUserMenu />
+                        <NavigationMobileMenu />
+                    </div>
+
+                    <template #fallback>
+                        <div class="flex items-center gap-4">
+                            <UButton to="/login" variant="ghost" color="gray">
+                                Войти
+                            </UButton>
+                            <UButton to="/register" color="primary">
+                                Регистрация
+                            </UButton>
+                        </div>
+                    </template>
+                </ClientOnly>
             </div>
         </nav>
     </header>
@@ -22,10 +35,4 @@ import NavigationLogo from './NavigationLogo.vue'
 import NavigationMainMenu from './NavigationMainMenu.vue'
 import NavigationUserMenu from './NavigationUserMenu.vue'
 import NavigationMobileMenu from './NavigationMobileMenu.vue'
-import { useSessionStore } from '~/stores/auth/session'
-import { useUserStore } from '~/stores/auth/client'
-
-
-const sessionStore = useSessionStore()
-const userStore = useUserStore()
 </script>

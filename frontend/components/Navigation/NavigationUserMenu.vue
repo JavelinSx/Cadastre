@@ -1,28 +1,42 @@
-// components/navigation/NavigationUserMenu.vue
+# components/navigation/NavigationUserMenu.vue
 <template>
-    <div class="hidden md:flex items-center space-x-4">
-        <template v-if="sessionStore.isAuthenticated">
-            <div class="flex items-center gap-4">
-                <ClientMenu v-if="clientStore.isClient" />
-                <AdminMenu v-if="adminStore.isAdmin" />
-                <UButton class="text-sm md:text-lg" color="gray" variant="ghost" :loading="authStore.loading"
-                    @click="handleLogout">
-                    Выйти
+    <ClientOnly>
+        <div class="hidden md:flex items-center space-x-4">
+            <template v-if="isAuthenticated">
+                <div class="flex items-center gap-4">
+                    <ClientMenu v-if="isClient" />
+                    <AdminMenu v-if="isAdmin" />
+                    <UButton class="text-sm md:text-lg" color="gray" variant="ghost" :loading="loading"
+                        @click="handleLogout">
+                        Выйти
+                    </UButton>
+                    <ThemeSwitcher />
+                </div>
+            </template>
+            <template v-else>
+                <UButton to="/login" variant="ghost" color="gray">
+                    Войти
+                </UButton>
+                <UButton to="/register" color="primary">
+                    Регистрация
+                </UButton>
+                <ThemeSwitcher />
+            </template>
+        </div>
+
+        <!-- Fallback для серверного рендеринга -->
+        <template #fallback>
+            <div class="hidden md:flex items-center space-x-4">
+                <UButton to="/login" variant="ghost" color="gray">
+                    Войти
+                </UButton>
+                <UButton to="/register" color="primary">
+                    Регистрация
                 </UButton>
                 <ThemeSwitcher />
             </div>
-
         </template>
-        <template v-else>
-            <UButton to="/login" variant="ghost" color="gray">
-                Войти
-            </UButton>
-            <UButton to="/register" color="primary">
-                Регистрация
-            </UButton>
-            <ThemeSwitcher />
-        </template>
-    </div>
+    </ClientOnly>
 </template>
 
 <script setup lang="ts">
@@ -34,14 +48,22 @@ import { useClientStore } from '~/stores/auth/client'
 import { useAdminStore } from '~/stores/auth/admin'
 import { useAuthStore } from '~/stores/auth/'
 
-
 const sessionStore = useSessionStore()
 const clientStore = useClientStore()
 const adminStore = useAdminStore()
 const authStore = useAuthStore()
 
+const isAuthenticated = computed(() => sessionStore.isAuthenticated)
+const isClient = computed(() => clientStore.isClient)
+const isAdmin = computed(() => adminStore.isAdmin)
+const loading = computed(() => authStore.loading)
 
-const handleLogout = () => {
-    authStore.logout()
+const handleLogout = async () => {
+    try {
+        await authStore.logout()
+        await navigateTo('/login')
+    } catch (error) {
+        console.error('Logout error:', error)
+    }
 }
 </script>

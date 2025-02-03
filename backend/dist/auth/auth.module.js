@@ -10,23 +10,27 @@ exports.AuthModule = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const passport_1 = require("@nestjs/passport");
+const config_1 = require("@nestjs/config");
 const users_module_1 = require("../users/users.module");
+const admins_module_1 = require("../admins/admins.module");
 const auth_service_1 = require("./auth.service");
 const auth_controller_1 = require("./auth.controller");
 const jwt_strategy_1 = require("./strategies/jwt.strategy");
-const config_1 = require("@nestjs/config");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
 exports.AuthModule = AuthModule = __decorate([
     (0, common_1.Module)({
         imports: [
+            config_1.ConfigModule.forRoot(),
             users_module_1.UsersModule,
+            admins_module_1.AdminsModule,
             passport_1.PassportModule,
             jwt_1.JwtModule.registerAsync({
+                imports: [config_1.ConfigModule],
                 inject: [config_1.ConfigService],
                 useFactory: async (configService) => ({
-                    secret: configService.get('JWT_SECRET'),
+                    secret: configService.get('JWT_SECRET') || 'your-fallback-secret-key',
                     signOptions: { expiresIn: '1d' },
                 }),
             }),

@@ -1,8 +1,8 @@
 // auth/auth.service.ts
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from 'users/users.service';
-import { AdminsService } from 'admins/admins.service';
+import { UsersService } from '../users/users.service';
+import { AdminsService } from '../admins/admins.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -50,15 +50,27 @@ export class AuthService {
     return null;
   }
 
+  // auth.service.ts
   async login(entity: any) {
-    // Создаем разные payload для разных типов
-    const payload =
-      entity.type === 'admin'
-        ? { sub: entity._id, name: entity.name, type: 'admin' }
-        : { sub: entity._id, email: entity.email, type: 'user' };
+    // Извлекаем _id и name из документа Mongoose
+    const userId = entity._doc?._id || entity._id;
+    const userName = entity._doc?.name || entity.name;
 
-    return {
-      access_token: this.jwtService.sign(payload),
+    const payload = {
+      sub: userId,
+      name: userName,
+      type: 'admin',
     };
+
+    const result = {
+      access_token: this.jwtService.sign(payload),
+      entity: {
+        id: userId.toString(), // Преобразуем ObjectId в строку
+        type: 'admin',
+        name: userName,
+      },
+    };
+
+    return result;
   }
 }

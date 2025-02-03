@@ -1,12 +1,36 @@
 // admins/admins.controller.ts
-import { Controller, Get, Post, Body, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  UseGuards,
+  Req,
+  HttpCode,
+  HttpStatus,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AdminsService } from './admins.service';
 import { CreateAdminDto } from './dto/create-admin.dto';
-import { AdminAuthGuard } from 'guards/admin-auth.guard';
+import { AdminAuthGuard } from '../guards/admin-auth.guard';
+import { LoginDto } from 'auth/dto/login.dto';
 
 @Controller('admins')
 export class AdminsController {
+  authService: any;
   constructor(private readonly adminsService: AdminsService) {}
+
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  async login(@Body() loginDto: LoginDto) {
+    const user = await this.authService.validateUser(loginDto.login, loginDto.password);
+
+    if (!user) {
+      throw new UnauthorizedException('Неверные учетные данные');
+    }
+
+    return this.authService.login(user);
+  }
 
   @Post()
   @UseGuards(AdminAuthGuard)

@@ -15,17 +15,16 @@ let Admin = class Admin {
 };
 exports.Admin = Admin;
 __decorate([
-    (0, mongoose_1.Prop)({ required: true, unique: true }),
+    (0, mongoose_1.Prop)({
+        required: true,
+        unique: true,
+    }),
     __metadata("design:type", String)
 ], Admin.prototype, "name", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ required: true }),
     __metadata("design:type", String)
 ], Admin.prototype, "password", void 0);
-__decorate([
-    (0, mongoose_1.Prop)({ default: 'admin' }),
-    __metadata("design:type", String)
-], Admin.prototype, "role", void 0);
 exports.Admin = Admin = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], Admin);

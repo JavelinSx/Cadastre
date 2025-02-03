@@ -5,7 +5,7 @@ import type { Session } from './types';
 export const useSessionStore = defineStore('auth/session', {
   state: (): Session => ({
     token: null,
-    authenticated: true, // временная заглушка
+    authenticated: false,
   }),
 
   getters: {

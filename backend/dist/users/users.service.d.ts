@@ -6,4 +6,6 @@ export declare class UsersService {
     constructor(userModel: Model<UserDocument>);
     create(createUserDto: CreateUserDto): Promise<User>;
     findByEmail(email: string): Promise<User>;
+    findById(id: string): Promise<User>;
+    findByPhone(phone: string): Promise<User>;
 }
