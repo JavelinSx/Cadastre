@@ -1,32 +1,27 @@
+import { computed, onMounted } from 'vue';
+import { useThemeStore } from '~/stores/theme';
+
 export const useDarkMode = () => {
-  // Используем встроенный useState Nuxt с уникальным ключом
-  const isDark = useState<boolean>('darkMode', () => false);
+  const themeStore = useThemeStore();
+
+  // Инициализация темы при монтировании
+  onMounted(() => {
+    if (import.meta.client) {
+      // Применяем текущую тему на документ
+      document.documentElement.classList.toggle('dark', themeStore.isActive);
+    }
+  });
 
   // Функция для переключения темы
   const toggleTheme = () => {
-    isDark.value = !isDark.value;
+    themeStore.switchTheme();
     if (import.meta.client) {
-      localStorage.setItem('darkMode', isDark.value.toString());
+      document.documentElement.classList.toggle('dark', themeStore.isActive);
     }
   };
 
-  // Инициализация темы
-  if (import.meta.client) {
-    const savedTheme = localStorage.getItem('darkMode');
-    if (savedTheme !== null) {
-      isDark.value = savedTheme === 'true';
-    }
-    watch(
-      isDark,
-      (newVal) => {
-        document.documentElement.classList.toggle('dark', newVal);
-      },
-      { immediate: true }
-    );
-  }
-
   return {
-    isDark,
+    isDark: computed(() => themeStore.isActive),
     toggleTheme,
   };
 };

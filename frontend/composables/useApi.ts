@@ -1,12 +1,13 @@
 // composables/useApi.ts
-import type { FetchOptions, APIResponse } from '~/types/api';
-import type { LoginResponse } from '~/types/auth';
+import { useRuntimeConfig } from 'nuxt/app';
+import { useAuthStore } from '~/stores/auth';
+import type { FetchOptions } from '~/types/api';
 
 const AUTH_TOKEN_KEY = 'auth_token';
 
 export const useApi = () => {
   const config = useRuntimeConfig();
-  const baseURL = config.public.apiBaseUrl;
+  const baseURL = config.public.apiBaseUrl || '';
 
   const getAuthToken = () => {
     if (import.meta.server) return null;
@@ -45,31 +46,31 @@ export const useApi = () => {
       ...options.headers,
     };
 
-    try {
-      const response = await $fetch(url, {
-        baseURL,
-        credentials: 'include',
-        headers,
-        timeout: 10000,
-        ...options,
-        ...(options.body
-          ? {
-              body: typeof options.body === 'string' ? options.body : JSON.stringify(options.body),
-            }
-          : {}),
-      });
+    const fetchOptions = {
+      baseURL,
+      credentials: 'include',
+      headers,
+      timeout: 10000,
+      ...options,
+      ...(options.body
+        ? {
+            body: typeof options.body === 'string' ? options.body : JSON.stringify(options.body),
+          }
+        : {}),
+    } as FetchOptions;
 
-      // Теперь мы возвращаем сам ответ, а не оборачиваем его в { data }
+    try {
+      const response = await $fetch(url, fetchOptions);
       return response as T;
     } catch (error: any) {
-      console.error('API Error:', error);
-
-      // Проверяем, есть ли у ошибки response
+      if (error.response?.status === 401) {
+        const authStore = useAuthStore();
+        authStore.clearAuth();
+      }
       if (error.response) {
         const errorMessage = error.response._data?.message || 'Ошибка авторизации. Попробуйте позже';
         throw new Error(errorMessage);
       }
-
       throw new Error('Ошибка сети. Попробуйте позже');
     }
   };

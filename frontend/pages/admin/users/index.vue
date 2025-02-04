@@ -1,6 +1,6 @@
 <template>
-    <div>page-admin-users</div>
+    <CreateClientForm />
 </template>
 <script setup lang="ts">
-// Здесь будет логика компонента
+import CreateClientForm from '~/components/CreateClientForm.vue';
 </script>

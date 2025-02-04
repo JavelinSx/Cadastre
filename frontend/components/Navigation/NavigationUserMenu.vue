@@ -4,8 +4,8 @@
         <div class="hidden md:flex items-center space-x-4">
             <template v-if="isAuthenticated">
                 <div class="flex items-center gap-4">
-                    <ClientMenu v-if="isClient" />
-                    <AdminMenu v-if="isAdmin" />
+                    <ClientMenu v-if="isClient && !loading" />
+                    <AdminMenu v-if="isAdmin && !loading" />
                     <UButton class="text-sm md:text-lg" color="gray" variant="ghost" :loading="loading"
                         @click="handleLogout">
                         Выйти
@@ -16,9 +16,6 @@
             <template v-else>
                 <UButton to="/login" variant="ghost" color="gray">
                     Войти
-                </UButton>
-                <UButton to="/register" color="primary">
-                    Регистрация
                 </UButton>
                 <ThemeSwitcher />
             </template>
@@ -47,6 +44,8 @@ import { useSessionStore } from '~/stores/auth/session'
 import { useClientStore } from '~/stores/auth/client'
 import { useAdminStore } from '~/stores/auth/admin'
 import { useAuthStore } from '~/stores/auth/'
+import { computed, watch } from 'vue'
+import { navigateTo } from 'nuxt/app'
 
 const sessionStore = useSessionStore()
 const clientStore = useClientStore()
@@ -57,7 +56,9 @@ const isAuthenticated = computed(() => sessionStore.isAuthenticated)
 const isClient = computed(() => clientStore.isClient)
 const isAdmin = computed(() => adminStore.isAdmin)
 const loading = computed(() => authStore.loading)
-
+watch(() => adminStore.isAdmin, (newValue) => {
+    console.log(newValue)
+})
 const handleLogout = async () => {
     try {
         await authStore.logout()

@@ -23,4 +23,7 @@ export const useSessionStore = defineStore('auth/session', {
       this.authenticated = false;
     },
   },
+  persist: {
+    paths: ['token', 'authenticated'],
+  },
 });

@@ -8,9 +8,13 @@ export enum OrderStatus {
 }
 
 export interface Order {
+  id: string; // Добавляем id заказа
+  userId: string; // Добавляем id пользователя
   name: string;
   price: number;
   status: OrderStatus;
   payment: boolean;
   problem: string;
+  createdAt?: Date; // Опциональные поля для дат
+  updatedAt?: Date;
 }

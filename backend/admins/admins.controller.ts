@@ -13,7 +13,7 @@ import {
 import { AdminsService } from './admins.service';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { AdminAuthGuard } from '../guards/admin-auth.guard';
-import { LoginDto } from 'auth/dto/login.dto';
+import { LoginDto } from '../auth/dto/login.dto';
 
 @Controller('admins')
 export class AdminsController {

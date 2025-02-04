@@ -1,10 +1,19 @@
 // stores/auth/index.ts
 import { defineStore } from 'pinia';
 import type { APIResponse } from '~/types/api';
-import type { AuthState, LoginCredentials, AuthenticatedEntity, LoginResponse, AuthError } from '~/types/auth';
+import type {
+  AuthState,
+  LoginCredentials,
+  AuthenticatedEntity,
+  LoginResponse,
+  AuthError,
+  Admin,
+  User,
+} from '~/types/auth';
 import { useSessionStore } from './session';
 import { useClientStore } from './client';
 import { useAdminStore } from './admin';
+import { useApi } from '~/composables/useApi';
 
 export const handleError = (error: any): AuthError => {
   if (error.response?.status === 401) {
@@ -29,8 +38,8 @@ export const useAuthStore = defineStore('auth', {
   }),
 
   getters: {
-    isAdmin: (state) => state.entity?.type === 'admin',
-    isUser: (state) => state.entity?.type === 'user',
+    isAdmin: (state) => state.entity?.role === 'admin',
+    isUser: (state) => state.entity?.role === 'user',
   },
 
   actions: {
@@ -50,8 +59,6 @@ export const useAuthStore = defineStore('auth', {
           body: credentials,
         });
 
-        console.log('Login response:', response); // Для отладки
-
         if (!response || !response.access_token) {
           throw new Error('Invalid response from server');
         }
@@ -63,7 +70,7 @@ export const useAuthStore = defineStore('auth', {
         this.setAuth(response);
         sessionStore.setSession(response.access_token);
 
-        if (response.entity.type === 'admin') {
+        if (response.entity.role === 'admin') {
           adminStore.setAdmin(response.entity);
         } else {
           clientStore.setClient(response.entity);
@@ -90,7 +97,7 @@ export const useAuthStore = defineStore('auth', {
       this.entity = null;
       this.isAuthenticated = false;
       this.error = null;
-      clearAuthToken(); // Clear token from localStorage
+      clearAuthToken();
     },
 
     async logout() {
@@ -106,18 +113,33 @@ export const useAuthStore = defineStore('auth', {
 
     // Add initialization action
     async initializeAuth() {
-      const { getAuthToken } = useApi();
+      const { getAuthToken, fetchApi } = useApi();
       const token = getAuthToken();
 
       if (token) {
-        const sessionStore = useSessionStore();
-        sessionStore.setSession(token);
-        this.token = token;
-        this.isAuthenticated = true;
+        try {
+          const adminProfile = await fetchApi<Admin>('/api/admins/profile');
 
-        // Optionally fetch user profile here to restore entity data
-        // await this.fetchProfile();
+          if (adminProfile && adminProfile.role === 'admin') {
+            // Если получили профиль - тогда уже устанавливаем все состояния
+            const sessionStore = useSessionStore();
+            const adminStore = useAdminStore();
+
+            sessionStore.setSession(token);
+            this.token = token;
+            this.isAuthenticated = true;
+
+            adminStore.setAdmin(adminProfile);
+            this.entity = adminProfile;
+          }
+        } catch (error) {
+          // При ошибке очищаем всё
+          this.clearAuth();
+        }
       }
     },
+  },
+  persist: {
+    paths: ['entity', 'token', 'isAuthenticated', 'loading', 'error'],
   },
 });

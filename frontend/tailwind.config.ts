@@ -15,6 +15,7 @@ export default <Config>{
   theme: {
     extend: {
       colors: {
+        white: '#f2f4f8',
         // Основные цветовые переменные
         primary: {
           DEFAULT: 'var(--color-primary)',

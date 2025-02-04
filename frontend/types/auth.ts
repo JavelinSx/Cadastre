@@ -3,16 +3,16 @@
 // Базовые типы для пользователей системы
 interface BaseEntity {
   id: string;
-  type: 'admin' | 'user';
+  role: 'admin' | 'user';
 }
 
 export interface Admin extends BaseEntity {
-  type: 'admin';
+  role: 'admin';
   name: string;
 }
 
 export interface User extends BaseEntity {
-  type: 'user';
+  role: 'user';
   email?: string;
   phone?: string;
 }
@@ -43,11 +43,11 @@ export interface LoginResponse {
 
 // Type guards для проверки типа сущности
 export const isAdmin = (entity: AuthenticatedEntity): entity is Admin => {
-  return entity.type === 'admin';
+  return entity.role === 'admin';
 };
 
 export const isUser = (entity: AuthenticatedEntity): entity is User => {
-  return entity.type === 'user';
+  return entity.role === 'user';
 };
 
 // Типы для создания пользователя (используется админом)

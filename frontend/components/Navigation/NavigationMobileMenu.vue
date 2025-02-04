@@ -94,12 +94,6 @@
                                     <span class="px-2">Войти</span>
                                     <div class="menu-line right-line"></div>
                                 </UButton>
-                                <UButton to="/register" block color="primary" class="text-lg w-full flex items-center"
-                                    @click="isOpen = false">
-                                    <div class="menu-line left-line"></div>
-                                    <span class="px-2">Регистрация</span>
-                                    <div class="menu-line right-line"></div>
-                                </UButton>
                             </div>
                             <ThemeSwitcher />
                         </template>

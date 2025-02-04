@@ -3,7 +3,7 @@ export default defineNuxtConfig({
   modules: ['@nuxtjs/tailwindcss', '@nuxt/ui', '@pinia/nuxt'],
   css: ['@/assets/global.css'],
   devServer: {
-    port: 3000
+    port: 3000,
   },
   runtimeConfig: {
     public: {
@@ -28,6 +28,9 @@ export default defineNuxtConfig({
   },
   imports: {
     dirs: ['composables'],
+  },
+  pinia: {
+    autoImports: ['defineStore', 'storeToRefs'],
   },
   ui: {
     global: true,

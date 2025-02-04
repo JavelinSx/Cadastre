@@ -25,6 +25,8 @@ import InputForm from '~/components/UI/InputForm.vue'
 import { z } from 'zod'
 import type { FormSubmitEvent } from '#ui/types'
 import { useAuthStore } from '~/stores/auth'
+import { computed, reactive, ref } from 'vue'
+import { navigateTo } from 'nuxt/app'
 
 const authStore = useAuthStore()
 const loading = computed(() => authStore.loading)

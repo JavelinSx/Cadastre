@@ -1,17 +1,28 @@
-# components/theme/ThemeSwitcher.vue
 <template>
     <ClientOnly>
         <UButton ref="buttonRef" class="flex items-center border rounded-full p-2 text-lg" color="gray" variant="ghost"
-            :icon="isDark ? 'i-heroicons-moon-20-solid' : 'i-heroicons-sun-20-solid'" @click="handleThemeToggle" />
+            :class="{
+                '!text-yellow-500 !bg-amber-100 hover:text-yellow-600': !themeStore.isActive,
+                '!text-blue-500 !hover:text-blue-600 !border-blue-500': themeStore.isActive
+            }" :icon="themeStore.isActive ? 'i-heroicons-moon-20-solid' : 'i-heroicons-sun-20-solid'"
+            @click="handleThemeToggle" />
     </ClientOnly>
 </template>
 
 <script setup>
-const { isDark, toggleTheme } = useDarkMode()
+import { useThemeStore } from '~/stores/theme'
+
+const themeStore = useThemeStore()
 const buttonRef = ref(null)
 const isMobile = ref(false)
 
+// Инициализация темы при монтировании
 onMounted(async () => {
+    // Применяем сохраненную тему
+    if (import.meta.client) {
+        document.documentElement.classList.toggle('dark', themeStore.isActive)
+    }
+
     // Динамический импорт GSAP только на клиенте
     const { gsap } = await import('gsap')
 
@@ -35,7 +46,8 @@ async function handleThemeToggle() {
             duration: 0.3,
             ease: 'power2.out',
             onComplete: () => {
-                toggleTheme()
+                themeStore.switchTheme()
+                document.documentElement.classList.toggle('dark', themeStore.isActive)
                 gsap.to(buttonRef.value.$el, {
                     scale: 1,
                     duration: 0.3,
@@ -51,7 +63,8 @@ async function handleThemeToggle() {
             duration: 0.3,
             ease: 'power2.out',
             onComplete: () => {
-                toggleTheme()
+                themeStore.switchTheme()
+                document.documentElement.classList.toggle('dark', themeStore.isActive)
                 gsap.fromTo(buttonRef.value.$el,
                     {
                         y: -50,
