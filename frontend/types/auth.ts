@@ -1,6 +1,6 @@
 // types/auth.ts
 
-// Базовые типы для пользователей системы
+// Базовые типы
 interface BaseEntity {
   id: string;
   role: 'admin' | 'user';
@@ -17,31 +17,42 @@ export interface User extends BaseEntity {
   phone?: string;
 }
 
-// Тип для авторизованной сущности (admin или user)
 export type AuthenticatedEntity = Admin | User;
 
-// Состояние авторизации
-export interface AuthState {
-  entity: AuthenticatedEntity | null;
+// Типы для входа
+export interface AdminLoginCredentials {
+  login: string;
+  password: string;
+}
+
+export interface UserLoginCredentials {
+  login: string;
+  password: string;
+}
+
+// Состояния авторизации
+export interface AdminAuthState {
+  entity: Admin | null;
   token: string | null;
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
 }
 
-// Данные для входа
-export interface LoginCredentials {
-  login: string; // может быть email, phone или name админа
-  password: string;
+export interface UserAuthState {
+  entity: User | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  loading: boolean;
+  error: string | null;
 }
 
-// Ответ от сервера при успешной авторизации
-export interface LoginResponse {
+export interface AuthResponse {
   access_token: string;
-  entity: AuthenticatedEntity;
+  entity: Admin | User;
 }
 
-// Type guards для проверки типа сущности
+// Type guards
 export const isAdmin = (entity: AuthenticatedEntity): entity is Admin => {
   return entity.role === 'admin';
 };
@@ -50,18 +61,22 @@ export const isUser = (entity: AuthenticatedEntity): entity is User => {
   return entity.role === 'user';
 };
 
-// Типы для создания пользователя (используется админом)
+// Создание пользователя
 export interface CreateUserData {
   email?: string;
   phone?: string;
   password: string;
 }
 
-// Типы ошибок аутентификации
+// Ошибки
 export type AuthError = 'INVALID_CREDENTIALS' | 'NETWORK_ERROR' | 'SERVER_ERROR' | 'UNKNOWN_ERROR';
 
-// Интерфейс для ответа с ошибкой
 export interface AuthErrorResponse {
   error: AuthError;
   message: string;
+}
+
+export interface Session {
+  token: string | null;
+  authenticated: boolean;
 }

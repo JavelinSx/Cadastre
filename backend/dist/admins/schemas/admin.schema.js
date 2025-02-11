@@ -20,13 +20,30 @@ __decorate([
         unique: true,
     }),
     __metadata("design:type", String)
-], Admin.prototype, "name", void 0);
+], Admin.prototype, "login", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ required: true }),
     __metadata("design:type", String)
 ], Admin.prototype, "password", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ default: 'admin' }),
+    __metadata("design:type", String)
+], Admin.prototype, "role", void 0);
 exports.Admin = Admin = __decorate([
-    (0, mongoose_1.Schema)({ timestamps: true })
+    (0, mongoose_1.Schema)({
+        timestamps: true,
+        toJSON: {
+            virtuals: true,
+            transform: (_, ret) => {
+                ret.id = ret._id;
+                delete ret._id;
+                delete ret.__v;
+                return ret;
+            },
+        },
+    })
 ], Admin);
 exports.AdminSchema = mongoose_1.SchemaFactory.createForClass(Admin);
+exports.AdminSchema.set('toJSON', { virtuals: true });
+exports.AdminSchema.set('toObject', { virtuals: true });
 //# sourceMappingURL=admin.schema.js.map

@@ -22,12 +22,27 @@ export default defineNuxtConfig({
   },
   postcss: {
     plugins: {
+      'postcss-import': {},
+      'tailwindcss/nesting': {},
       tailwindcss: {},
       autoprefixer: {},
     },
   },
   imports: {
-    dirs: ['composables'],
+    dirs: [
+      './composables',
+      './types', // обновлено
+    ],
+  },
+  typescript: {
+    tsConfig: {
+      compilerOptions: {
+        paths: {
+          '~/*': ['./*'],
+          '@/*': ['./*'],
+        },
+      },
+    },
   },
   pinia: {
     autoImports: ['defineStore', 'storeToRefs'],

@@ -2,18 +2,19 @@
 <template>
     <UCard class="border p-8 rounded max-w-md mx-auto">
         <template #header>
-            Создание клиента
+            <h2 class="text-xl font-semibold">Создание клиента</h2>
         </template>
+
         <UForm :schema="schema" :state="formState" @submit="onSubmit" class="flex flex-col gap-2">
             <!-- Переключатель типа контакта -->
             <div class="flex gap-4 mb-4">
-                <URadio v-model="contactType" value="email" label="Email" />
-                <URadio v-model="contactType" value="phone" label="Телефон" />
+                <URadio v-model="contactType" value="email" label="Email" name="contact-type" />
+                <URadio v-model="contactType" value="phone" label="Телефон" name="contact-type" />
             </div>
 
             <!-- Динамическое поле контакта -->
             <InputForm v-model="formState[contactType]" :name="contactType"
-                :label="contactType === 'email' ? 'Email' : 'Телефон'"
+                :label="contactType === 'email' ? 'Почта' : 'Телефон'"
                 :placeholder="contactType === 'email' ? 'example@mail.com' : '+7 999 999 99 99'"
                 :error="errors[contactType]" :type="contactType === 'email' ? 'email' : 'tel'" />
 
@@ -32,29 +33,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
-import { useAdminUsersStore } from '~/stores/admin/users';
-import InputForm from '~/components/UI/InputForm.vue';
-import { z } from 'zod';
-import type { FormSubmitEvent } from '#ui/types';
+import InputForm from './UI/InputForm'
+import { computed, reactive, ref } from 'vue'
+import { useAdminUsersStore } from '~/stores/admin/users'
+import { z } from 'zod'
+import type { FormSubmitEvent } from '@nuxt/ui/dist/runtime/types'
 
-const adminUsersStore = useAdminUsersStore();
-const loading = ref(false);
-const contactType = ref<'email' | 'phone'>('email');
+const adminUsersStore = useAdminUsersStore()
+const loading = ref(false)
+const contactType = ref<'email' | 'phone'>('email')
+const error = ref<string | null>(null)
 
 const formState = reactive({
     email: '',
     phone: '',
     password: ''
-});
+})
 
 const errors = reactive({
     email: '',
     phone: '',
     password: ''
-});
-
-const error = ref<string | null>(null);
+})
 
 // Динамическая схема валидации в зависимости от типа контакта
 const schema = computed(() => {
@@ -65,7 +65,7 @@ const schema = computed(() => {
                 /^[A-Za-z0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/,
                 'Недопустимые символы в пароле'
             )
-    };
+    }
 
     if (contactType.value === 'email') {
         return z.object({
@@ -74,7 +74,7 @@ const schema = computed(() => {
                 .email('Введите корректный email')
                 .min(1, 'Email обязателен'),
             phone: z.string().optional()
-        });
+        })
     } else {
         return z.object({
             ...baseSchema,
@@ -82,64 +82,64 @@ const schema = computed(() => {
                 .regex(/^\+?[\d\s-]{10,}$/, 'Введите корректный номер телефона')
                 .min(1, 'Телефон обязателен'),
             email: z.string().optional()
-        });
+        })
     }
-});
+})
 
 const clearErrors = () => {
-    errors.email = '';
-    errors.phone = '';
-    errors.password = '';
-    error.value = null;
-};
+    errors.email = ''
+    errors.phone = ''
+    errors.password = ''
+    error.value = null
+}
 
 const onSubmit = async (event: FormSubmitEvent<typeof schema>) => {
-    clearErrors();
-    loading.value = true;
+    clearErrors()
+    loading.value = true
 
     try {
         const userData = {
             password: formState.password,
             [contactType.value]: formState[contactType.value]
-        };
+        }
 
-        await adminUsersStore.createUser(userData);
+        await adminUsersStore.createUser(userData)
 
         // Очищаем форму после успешного создания
-        formState.email = '';
-        formState.phone = '';
-        formState.password = '';
+        formState.email = ''
+        formState.phone = ''
+        formState.password = ''
 
         // Показываем уведомление об успехе
-        const toast = useToast();
-        toast.add({
+        const { toast } = useToast()
+        toast({
             title: 'Успешно',
             description: 'Клиент успешно создан',
             color: 'green'
-        });
+        })
 
     } catch (e: any) {
         // Обработка ошибок
         if (e.response?.status === 409) {
-            error.value = 'Пользователь с таким email/телефоном уже существует';
+            error.value = 'Пользователь с таким email/телефоном уже существует'
         } else if (e.message === 'Network Error') {
-            error.value = 'Ошибка сети. Проверьте подключение';
+            error.value = 'Ошибка сети. Проверьте подключение'
         } else {
-            error.value = e.message || 'Произошла ошибка при создании клиента';
+            error.value = e.message || 'Произошла ошибка при создании клиента'
         }
 
         // Обработка ошибок валидации
         if (e.response?.data?.errors) {
-            errors.email = e.response.data.errors.email?.[0] || '';
-            errors.phone = e.response.data.errors.phone?.[0] || '';
-            errors.password = e.response.data.errors.password?.[0] || '';
+            errors.email = e.response.data.errors.email?.[0] || ''
+            errors.phone = e.response.data.errors.phone?.[0] || ''
+            errors.password = e.response.data.errors.password?.[0] || ''
         }
     } finally {
-        loading.value = false;
+        loading.value = false
     }
-};
+}
 
-function useToast() {
-    throw new Error('Function not implemented.');
+function useToast(): { toast: any } {
+    throw new Error('Function not implemented.')
 }
 </script>

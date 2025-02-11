@@ -4,7 +4,7 @@
         <div class="hidden md:flex items-center space-x-4">
             <template v-if="isAuthenticated">
                 <div class="flex items-center gap-4">
-                    <ClientMenu v-if="isClient && !loading" />
+                    <UserMenu v-if="isUser && !loading" />
                     <AdminMenu v-if="isAdmin && !loading" />
                     <UButton class="text-sm md:text-lg" color="gray" variant="ghost" :loading="loading"
                         @click="handleLogout">
@@ -21,7 +21,6 @@
             </template>
         </div>
 
-        <!-- Fallback для серверного рендеринга -->
         <template #fallback>
             <div class="hidden md:flex items-center space-x-4">
                 <UButton to="/login" variant="ghost" color="gray">
@@ -38,30 +37,29 @@
 
 <script setup lang="ts">
 import ThemeSwitcher from '~/components/Theme/ThemeSwitcher.vue'
-import ClientMenu from './menus/ClientMenu.vue'
+import UserMenu from './menus/UserMenu.vue'
 import AdminMenu from './menus/AdminMenu.vue'
-import { useSessionStore } from '~/stores/auth/session'
-import { useClientStore } from '~/stores/auth/client'
-import { useAdminStore } from '~/stores/auth/admin'
-import { useAuthStore } from '~/stores/auth/'
-import { computed, watch } from 'vue'
+import { computed } from 'vue'
 import { navigateTo } from 'nuxt/app'
+import { useAdminAuthStore } from '~/stores/auth/auth.admin'
+import { useUserAuthStore } from '~/stores/auth/auth.user'
 
-const sessionStore = useSessionStore()
-const clientStore = useClientStore()
-const adminStore = useAdminStore()
-const authStore = useAuthStore()
 
-const isAuthenticated = computed(() => sessionStore.isAuthenticated)
-const isClient = computed(() => clientStore.isClient)
-const isAdmin = computed(() => adminStore.isAdmin)
-const loading = computed(() => authStore.loading)
-watch(() => adminStore.isAdmin, (newValue) => {
-    console.log(newValue)
-})
+const adminAuthStore = useAdminAuthStore()
+const userAuthStore = useUserAuthStore()
+
+const isAuthenticated = computed(() => adminAuthStore.isAuthenticated || userAuthStore.isAuthenticated)
+const isAdmin = computed(() => adminAuthStore.isAdmin)
+const isUser = computed(() => userAuthStore.isUser)
+const loading = computed(() => adminAuthStore.loading || userAuthStore.loading)
+
 const handleLogout = async () => {
     try {
-        await authStore.logout()
+        if (isAdmin.value) {
+            await adminAuthStore.logout()
+        } else if (isUser.value) {
+            await userAuthStore.logout()
+        }
         await navigateTo('/login')
     } catch (error) {
         console.error('Logout error:', error)

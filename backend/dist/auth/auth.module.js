@@ -13,9 +13,14 @@ const passport_1 = require("@nestjs/passport");
 const config_1 = require("@nestjs/config");
 const users_module_1 = require("../users/users.module");
 const admins_module_1 = require("../admins/admins.module");
-const auth_service_1 = require("./auth.service");
-const auth_controller_1 = require("./auth.controller");
 const jwt_strategy_1 = require("./strategies/jwt.strategy");
+const auth_service_admin_1 = require("./services/auth.service.admin");
+const auth_service_user_1 = require("./services/auth.service.user");
+const auth_controller_admin_1 = require("./controllers/auth.controller.admin");
+const auth_controller_user_1 = require("./controllers/auth.controller.user");
+const jwt_auth_guard_1 = require("./guards/jwt-auth.guard");
+const admin_auth_guard_1 = require("../guards/admin-auth.guard");
+const user_auth_guard_1 = require("../guards/user-auth.guard");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -30,13 +35,23 @@ exports.AuthModule = AuthModule = __decorate([
                 imports: [config_1.ConfigModule],
                 inject: [config_1.ConfigService],
                 useFactory: async (configService) => ({
-                    secret: configService.get('JWT_SECRET') || 'your-fallback-secret-key',
-                    signOptions: { expiresIn: '1d' },
+                    secret: configService.get('JWT_SECRET'),
+                    signOptions: {
+                        expiresIn: configService.get('JWT_EXPIRATION') || '1d',
+                    },
                 }),
             }),
         ],
-        providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy],
-        controllers: [auth_controller_1.AuthController],
+        providers: [
+            auth_service_admin_1.AdminAuthService,
+            auth_service_user_1.UserAuthService,
+            jwt_strategy_1.JwtStrategy,
+            jwt_auth_guard_1.JwtAuthGuard,
+            admin_auth_guard_1.AdminAuthGuard,
+            user_auth_guard_1.UserAuthGuard,
+        ],
+        controllers: [auth_controller_admin_1.AdminAuthController, auth_controller_user_1.UserAuthController],
+        exports: [jwt_auth_guard_1.JwtAuthGuard, admin_auth_guard_1.AdminAuthGuard, user_auth_guard_1.UserAuthGuard],
     })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map

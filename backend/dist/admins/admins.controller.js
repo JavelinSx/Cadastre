@@ -17,7 +17,7 @@ const common_1 = require("@nestjs/common");
 const admins_service_1 = require("./admins.service");
 const create_admin_dto_1 = require("./dto/create-admin.dto");
 const admin_auth_guard_1 = require("../guards/admin-auth.guard");
-const login_dto_1 = require("../auth/dto/login.dto");
+const auth_login_admin_dto_1 = require("../auth/dto/auth.login-admin.dto");
 let AdminsController = class AdminsController {
     constructor(adminsService) {
         this.adminsService = adminsService;
@@ -33,7 +33,7 @@ let AdminsController = class AdminsController {
         return this.adminsService.create(createAdminDto);
     }
     async getProfile(req) {
-        return this.adminsService.findByName(req.user.name);
+        return this.adminsService.findByLogin(req.user.login);
     }
 };
 exports.AdminsController = AdminsController;
@@ -42,7 +42,7 @@ __decorate([
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [login_dto_1.LoginDto]),
+    __metadata("design:paramtypes", [auth_login_admin_dto_1.AdminLoginDto]),
     __metadata("design:returntype", Promise)
 ], AdminsController.prototype, "login", null);
 __decorate([

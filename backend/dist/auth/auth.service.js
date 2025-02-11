@@ -43,21 +43,21 @@ let AuthService = class AuthService {
             const user = await this.usersService.findByEmail(login);
             if (user && (await bcrypt.compare(password, user.password))) {
                 const { password } = user, result = __rest(user, ["password"]);
-                return Object.assign(Object.assign({}, result), { type: 'user' });
+                return Object.assign(Object.assign({}, result), { role: 'user' });
             }
         }
         else if (this.isPhone(login)) {
             const user = await this.usersService.findByPhone(login);
             if (user && (await bcrypt.compare(password, user.password))) {
                 const { password } = user, result = __rest(user, ["password"]);
-                return Object.assign(Object.assign({}, result), { type: 'user' });
+                return Object.assign(Object.assign({}, result), { role: 'user' });
             }
         }
         else {
             const admin = await this.adminsService.findByName(login);
             if (admin && (await bcrypt.compare(password, admin.password))) {
                 const { password } = admin, result = __rest(admin, ["password"]);
-                return Object.assign(Object.assign({}, result), { type: 'admin' });
+                return Object.assign(Object.assign({}, result), { role: 'admin' });
             }
         }
         return null;
@@ -69,13 +69,13 @@ let AuthService = class AuthService {
         const payload = {
             sub: userId,
             name: userName,
-            type: 'admin',
+            role: 'admin',
         };
         const result = {
             access_token: this.jwtService.sign(payload),
             entity: {
                 id: userId.toString(),
-                type: 'admin',
+                role: 'admin',
                 name: userName,
             },
         };

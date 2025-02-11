@@ -13,7 +13,7 @@ import {
 import { AdminsService } from './admins.service';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { AdminAuthGuard } from '../guards/admin-auth.guard';
-import { LoginDto } from '../auth/dto/login.dto';
+import { AdminLoginDto } from 'auth/dto/auth.login-admin.dto';
 
 @Controller('admins')
 export class AdminsController {
@@ -22,7 +22,7 @@ export class AdminsController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body() loginDto: LoginDto) {
+  async login(@Body() loginDto: AdminLoginDto) {
     const user = await this.authService.validateUser(loginDto.login, loginDto.password);
 
     if (!user) {
@@ -41,6 +41,6 @@ export class AdminsController {
   @Get('profile')
   @UseGuards(AdminAuthGuard)
   async getProfile(@Req() req) {
-    return this.adminsService.findByName(req.user.name);
+    return this.adminsService.findByLogin(req.user.login);
   }
 }

@@ -1,18 +1,17 @@
-// stores/auth/client.ts
+// stores/auth/user.ts
 import { defineStore } from 'pinia';
 import { useApi } from '~/composables/useApi';
-import type { User } from '~/types/auth';
-import { OrderStatus, type Order } from '~/types/orders';
+import { type User, type Order, OrderStatus } from '~/types';
 
-interface ClientState {
+interface UserState {
   data: User | null;
   orders: Order[];
   loading: boolean;
   error: string | null;
 }
 
-export const useClientStore = defineStore('client', {
-  state: (): ClientState => ({
+export const useUserStore = defineStore('user', {
+  state: (): UserState => ({
     data: null,
     orders: [],
     loading: false,
@@ -20,11 +19,11 @@ export const useClientStore = defineStore('client', {
   }),
 
   getters: {
-    isClient: (state): boolean => state.data?.role === 'user',
+    isUser: (state): boolean => state.data?.role === 'user',
 
-    clientEmail: (state): string | undefined => (state.data?.role === 'user' ? state.data.email : undefined),
+    userEmail: (state): string | undefined => (state.data?.role === 'user' ? state.data.email : undefined),
 
-    clientPhone: (state): string | undefined => (state.data?.role === 'user' ? state.data.phone : undefined),
+    userPhone: (state): string | undefined => (state.data?.role === 'user' ? state.data.phone : undefined),
 
     activeOrders: (state): Order[] => state.orders.filter((order) => order.status !== OrderStatus.READY),
 
@@ -36,14 +35,14 @@ export const useClientStore = defineStore('client', {
   },
 
   actions: {
-    setClient(client: User) {
-      if (client.role !== 'user') {
-        throw new Error('Invalid client type');
+    setUser(user: User) {
+      if (user.role !== 'user') {
+        throw new Error('Invalid user type');
       }
-      this.data = client;
+      this.data = user;
     },
 
-    clearClient() {
+    clearUser() {
       this.data = null;
       this.orders = [];
       this.error = null;
@@ -96,11 +95,11 @@ export const useClientStore = defineStore('client', {
       }
     },
 
-    async refreshClientData() {
+    async refreshUserData() {
       try {
         await Promise.all([this.fetchProfile(), this.fetchOrders()]);
       } catch (error: any) {
-        this.error = error.message || 'Failed to refresh client data';
+        this.error = error.message || 'Failed to refresh user data';
         throw error;
       }
     },

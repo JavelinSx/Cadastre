@@ -1,12 +1,12 @@
-// strategies/jwt.strategy.ts
-import { ExtractJwt, Strategy } from 'passport-jwt';
-import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { UsersService } from '../../users/users.service';
-import { AdminsService } from '../../admins/admins.service';
-import { JwtPayload } from '../../types/auth.types';
+import { PassportStrategy } from '@nestjs/passport';
+import { AdminsService } from 'admins/admins.service';
+import { ExtractJwt, Strategy } from 'passport-jwt';
+import { JwtPayload } from 'types/auth.types';
+import { UsersService } from 'users/users.service';
 
+// strategies/jwt.strategy.ts
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
@@ -22,8 +22,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
+    console.log('JWT');
+    console.log('JWT Strategy Payload:', payload);
     const entity =
-      payload.type === 'admin'
+      payload.role === 'admin'
         ? await this.adminsService.findById(payload.sub)
         : await this.usersService.findById(payload.sub);
 
@@ -33,8 +35,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     return {
       id: payload.sub,
-      type: payload.type,
-      ...(payload.type === 'admin' ? { name: payload.name } : { email: payload.email }),
+      role: payload.role,
+      ...(payload.role === 'admin' ? { login: payload.login } : { email: payload.email }),
     };
   }
 }

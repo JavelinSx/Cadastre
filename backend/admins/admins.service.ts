@@ -19,11 +19,11 @@ export class AdminsService {
     return createdAdmin.save();
   }
 
-  async findByName(name: string): Promise<Admin> {
-    return this.adminModel.findOne({ name }).exec();
+  async findByLogin(login: string): Promise<AdminDocument | null> {
+    return this.adminModel.findOne({ login }).exec();
   }
 
-  async findById(id: string): Promise<Admin> {
+  async findById(id: string): Promise<AdminDocument | null> {
     return this.adminModel.findById(id).exec();
   }
 }

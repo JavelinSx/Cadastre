@@ -1,5 +1,5 @@
 import { AuthService } from './auth.service';
-import { LoginDto } from './dto/login.dto';
+import { LoginDto } from './dto/auth.login-user.dto';
 export declare class AuthController {
     private authService;
     constructor(authService: AuthService);
@@ -7,7 +7,7 @@ export declare class AuthController {
         access_token: string;
         entity: {
             id: any;
-            type: string;
+            role: string;
             name: any;
         };
     }>;

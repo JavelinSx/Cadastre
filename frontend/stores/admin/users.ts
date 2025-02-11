@@ -1,8 +1,8 @@
 // stores/admin/users.ts
 import { defineStore } from 'pinia';
 import { useApi } from '~/composables/useApi';
-import type { User, CreateUserData } from '~/types/auth';
-import type { Order, OrderStatus } from '~/types/orders';
+import type { User, CreateUserData } from '~/types';
+import type { Order, OrderStatus } from '~/types';
 
 interface UsersState {
   users: User[];

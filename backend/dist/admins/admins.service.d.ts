@@ -5,6 +5,6 @@ export declare class AdminsService {
     private adminModel;
     constructor(adminModel: Model<AdminDocument>);
     create(createAdminDto: CreateAdminDto): Promise<Admin>;
-    findByName(name: string): Promise<Admin>;
-    findById(id: string): Promise<Admin>;
+    findByLogin(login: string): Promise<AdminDocument | null>;
+    findById(id: string): Promise<AdminDocument | null>;
 }

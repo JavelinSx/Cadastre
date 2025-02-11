@@ -27,8 +27,8 @@ let AdminsService = class AdminsService {
         const createdAdmin = new this.adminModel(Object.assign(Object.assign({}, createAdminDto), { password: hashedPassword }));
         return createdAdmin.save();
     }
-    async findByName(name) {
-        return this.adminModel.findOne({ name }).exec();
+    async findByLogin(login) {
+        return this.adminModel.findOne({ login }).exec();
     }
     async findById(id) {
         return this.adminModel.findById(id).exec();

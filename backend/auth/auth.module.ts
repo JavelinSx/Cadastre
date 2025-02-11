@@ -5,26 +5,54 @@ import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UsersModule } from '../users/users.module';
 import { AdminsModule } from '../admins/admins.module';
-import { AuthService } from './auth.service';
-import { AuthController } from './auth.controller';
+
+// Strategy
 import { JwtStrategy } from './strategies/jwt.strategy';
+
+// Services
+import { AdminAuthService } from './services/auth.service.admin';
+import { UserAuthService } from './services/auth.service.user';
+
+// Controllers
+import { AdminAuthController } from './controllers/auth.controller.admin';
+import { UserAuthController } from './controllers/auth.controller.user';
+
+// Guards
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { AdminAuthGuard } from 'guards/admin-auth.guard';
+import { UserAuthGuard } from 'guards/user-auth.guard';
 
 @Module({
   imports: [
-    ConfigModule.forRoot(), // Add ConfigModule
+    ConfigModule.forRoot(),
     UsersModule,
     AdminsModule,
     PassportModule,
     JwtModule.registerAsync({
-      imports: [ConfigModule], // Import ConfigModule here as well
+      imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET') || 'your-fallback-secret-key',
-        signOptions: { expiresIn: '1d' },
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: {
+          expiresIn: configService.get<string>('JWT_EXPIRATION') || '1d',
+        },
       }),
     }),
   ],
-  providers: [AuthService, JwtStrategy],
-  controllers: [AuthController],
+  providers: [
+    // Services
+    AdminAuthService,
+    UserAuthService,
+
+    // Strategy
+    JwtStrategy,
+
+    // Guards
+    JwtAuthGuard,
+    AdminAuthGuard,
+    UserAuthGuard,
+  ],
+  controllers: [AdminAuthController, UserAuthController],
+  exports: [JwtAuthGuard, AdminAuthGuard, UserAuthGuard],
 })
 export class AuthModule {}

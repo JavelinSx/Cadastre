@@ -10,12 +10,12 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.JwtStrategy = void 0;
-const passport_jwt_1 = require("passport-jwt");
-const passport_1 = require("@nestjs/passport");
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
-const users_service_1 = require("../../users/users.service");
+const passport_1 = require("@nestjs/passport");
 const admins_service_1 = require("../../admins/admins.service");
+const passport_jwt_1 = require("passport-jwt");
+const users_service_1 = require("../../users/users.service");
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
     constructor(usersService, adminsService, configService) {
         super({
@@ -27,13 +27,15 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
         this.adminsService = adminsService;
     }
     async validate(payload) {
-        const entity = payload.type === 'admin'
+        console.log('JWT');
+        console.log('JWT Strategy Payload:', payload);
+        const entity = payload.role === 'admin'
             ? await this.adminsService.findById(payload.sub)
             : await this.usersService.findById(payload.sub);
         if (!entity) {
             throw new common_1.UnauthorizedException();
         }
-        return Object.assign({ id: payload.sub, type: payload.type }, (payload.type === 'admin' ? { name: payload.name } : { email: payload.email }));
+        return Object.assign({ id: payload.sub, role: payload.role }, (payload.role === 'admin' ? { login: payload.login } : { email: payload.email }));
     }
 };
 exports.JwtStrategy = JwtStrategy;

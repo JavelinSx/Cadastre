@@ -11,7 +11,7 @@ async function bootstrap() {
     const adminsService = app.get(AdminsService);
 
     const admin = await adminsService.create({
-      name: 'admin',
+      login: 'admin',
       password: 'admin1234567890',
     });
 

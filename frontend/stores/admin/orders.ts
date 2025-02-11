@@ -1,7 +1,7 @@
 // stores/admin/orders.ts
 import { defineStore } from 'pinia';
 import { useApi } from '~/composables/useApi';
-import type { Order, OrderStatus } from '~/types/orders';
+import type { Order, OrderStatus } from '~/types';
 
 interface OrdersState {
   orders: Order[];

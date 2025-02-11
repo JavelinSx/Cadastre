@@ -32,16 +32,13 @@
             }
         }">
             <div class="flex flex-col h-full">
-                <!-- Header -->
                 <div class="flex items-center justify-between p-4 border-b">
                     <NavigationLogo />
                     <UButton icon="i-heroicons-x-mark" color="gray" variant="ghost" @click="isOpen = false" />
                 </div>
 
-                <!-- Content -->
                 <div class="flex-1 overflow-y-auto mt-8">
                     <div class="flex flex-col items-center p-4 gap-3">
-                        <!-- Основное меню -->
                         <div class="flex flex-col items-center w-full gap-3">
                             <UButton v-for="item in mainMenuItems" :key="item.path" :to="item.path" block
                                 variant="ghost" color="gray" class="text-lg w-full flex items-center"
@@ -52,10 +49,9 @@
                             </UButton>
                         </div>
 
-                        <!-- Авторизованное меню -->
-                        <template v-if="sessionStore.isAuthenticated">
-                            <div class="flex flex-col items-center w-full gap-3" v-if="clientStore.isClient">
-                                <UButton v-for="item in clientMenuItems" :key="item.path" :to="item.path" block
+                        <template v-if="isAuthenticated">
+                            <div class="flex flex-col items-center w-full gap-3" v-if="isUser">
+                                <UButton v-for="item in userMenuItems" :key="item.path" :to="item.path" block
                                     variant="ghost" color="gray" class="text-lg w-full flex items-center"
                                     @click="isOpen = false">
                                     <div class="menu-line left-line"></div>
@@ -64,7 +60,7 @@
                                 </UButton>
                             </div>
 
-                            <div class="flex flex-col items-center w-full gap-3" v-if="adminStore.isAdmin">
+                            <div class="flex flex-col items-center w-full gap-3" v-if="isAdmin">
                                 <UButton v-for="item in adminMenuItems" :key="item.path" :to="item.path" block
                                     variant="ghost" color="gray" class="text-lg w-full flex items-center"
                                     @click="isOpen = false">
@@ -75,7 +71,7 @@
                             </div>
 
                             <UButton block color="gray" variant="ghost" class="text-lg w-full flex items-center mb-8"
-                                :class="{ 'opacity-50 cursor-not-allowed': authStore.loading }" @click="handleLogout">
+                                :class="{ 'opacity-50 cursor-not-allowed': loading }" @click="handleLogout">
                                 <div class="menu-line left-line"></div>
                                 <span class="px-2">Выйти</span>
                                 <div class="menu-line right-line"></div>
@@ -84,9 +80,8 @@
                             <ThemeSwitcher />
                         </template>
 
-                        <!-- Неавторизованное меню -->
                         <template v-else>
-                            <div class="w-full mt-4 mb-4 h-[1px] bg-gray-200 dark:bg-gray-700 "></div>
+                            <div class="w-full mt-4 mb-4 h-[1px] bg-gray-200 dark:bg-gray-700"></div>
                             <div class="flex flex-col items-center w-full gap-3 mb-8">
                                 <UButton to="/login" block variant="ghost" color="gray"
                                     class="text-lg w-full flex items-center" @click="isOpen = false">
@@ -107,27 +102,27 @@
 <script setup lang="ts">
 import ThemeSwitcher from '~/components/Theme/ThemeSwitcher.vue'
 import NavigationLogo from './NavigationLogo.vue'
-import { ref } from 'vue'
-import { useSessionStore } from '~/stores/auth/session'
-
-import { useAuthStore } from '~/stores/auth/'
+import { ref, computed } from 'vue'
 import type { MenuItem } from '~/types/menu'
-import { useClientStore } from '~/stores/auth/client'
-import { useAdminStore } from '~/stores/auth/admin'
+import { useAdminAuthStore } from '~/stores/auth/auth.admin'
+import { useUserAuthStore } from '~/stores/auth/auth.user'
 
-const sessionStore = useSessionStore()
 
-const authStore = useAuthStore()
-const clientStore = useClientStore()
-const adminStore = useAdminStore()
+const adminAuthStore = useAdminAuthStore()
+const userAuthStore = useUserAuthStore()
 const isOpen = ref(false)
+
+const isAuthenticated = computed(() => adminAuthStore.isAuthenticated || userAuthStore.isAuthenticated)
+const isAdmin = computed(() => adminAuthStore.isAdmin)
+const isUser = computed(() => userAuthStore.isUser)
+const loading = computed(() => adminAuthStore.loading || userAuthStore.loading)
 
 const mainMenuItems: MenuItem[] = [
     { label: 'Главная', path: '/' },
     { label: 'Услуги', path: '/services' }
 ]
 
-const clientMenuItems: MenuItem[] = [
+const userMenuItems: MenuItem[] = [
     { label: 'Личный кабинет', path: '/dashboard' },
     { label: 'Заказы', path: '/orders' },
     { label: 'Поддержка', path: '/chat' }
@@ -140,7 +135,11 @@ const adminMenuItems: MenuItem[] = [
 ]
 
 const handleLogout = async () => {
-    await authStore.logout()
+    if (isAdmin.value) {
+        await adminAuthStore.logout()
+    } else if (isUser.value) {
+        await userAuthStore.logout()
+    }
     isOpen.value = false
 }
 </script>

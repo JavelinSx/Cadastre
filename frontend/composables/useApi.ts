@@ -1,6 +1,8 @@
 // composables/useApi.ts
 import { useRuntimeConfig } from 'nuxt/app';
-import { useAuthStore } from '~/stores/auth';
+import { useAdminAuthStore } from '~/stores/auth/auth.admin';
+import { useUserAuthStore } from '~/stores/auth/auth.user';
+
 import type { FetchOptions } from '~/types/api';
 
 const AUTH_TOKEN_KEY = 'auth_token';
@@ -37,6 +39,16 @@ export const useApi = () => {
     }
   };
 
+  const handleAuthError = () => {
+    const adminAuthStore = useAdminAuthStore();
+    const userAuthStore = useUserAuthStore();
+
+    // Clean up both stores since we don't know which one is active
+    adminAuthStore.clearAuth();
+    userAuthStore.clearAuth();
+    clearAuthToken();
+  };
+
   const fetchApi = async <T>(url: string, options: FetchOptions = {}): Promise<T> => {
     const token = getAuthToken();
 
@@ -64,14 +76,13 @@ export const useApi = () => {
       return response as T;
     } catch (error: any) {
       if (error.response?.status === 401) {
-        const authStore = useAuthStore();
-        authStore.clearAuth();
+        handleAuthError();
       }
       if (error.response) {
         const errorMessage = error.response._data?.message || 'Ошибка авторизации. Попробуйте позже';
         throw new Error(errorMessage);
       }
-      throw new Error('Ошибка сети. Попробуйте позже');
+      throw new Error('Ошибка сети. Проверьте подключение');
     }
   };
 

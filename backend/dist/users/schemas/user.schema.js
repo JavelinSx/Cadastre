@@ -35,11 +35,24 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "password", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ default: 'client' }),
+    (0, mongoose_1.Prop)({ default: 'user' }),
     __metadata("design:type", String)
 ], User.prototype, "role", void 0);
 exports.User = User = __decorate([
-    (0, mongoose_1.Schema)({ timestamps: true })
+    (0, mongoose_1.Schema)({
+        timestamps: true,
+        toJSON: {
+            virtuals: true,
+            transform: (_, ret) => {
+                ret.id = ret._id;
+                delete ret._id;
+                delete ret.__v;
+                return ret;
+            },
+        },
+    })
 ], User);
 exports.UserSchema = mongoose_1.SchemaFactory.createForClass(User);
+exports.UserSchema.set('toJSON', { virtuals: true });
+exports.UserSchema.set('toObject', { virtuals: true });
 //# sourceMappingURL=user.schema.js.map

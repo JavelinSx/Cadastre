@@ -1,7 +1,7 @@
 // stores/auth/admin.ts
 import { defineStore } from 'pinia';
 import { useApi } from '~/composables/useApi';
-import type { Admin } from '~/types/auth';
+import type { Admin } from '~/types';
 
 interface AdminState {
   entity: Admin | null;

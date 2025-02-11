@@ -23,13 +23,13 @@
 <script setup lang="ts">
 import InputForm from '~/components/UI/InputForm.vue'
 import { z } from 'zod'
-import type { FormSubmitEvent } from '#ui/types'
-import { useAuthStore } from '~/stores/auth'
+import { useAdminAuthStore } from '~/stores/auth/auth.admin'
 import { computed, reactive, ref } from 'vue'
 import { navigateTo } from 'nuxt/app'
+import type { FormSubmitEvent } from '@nuxt/ui/dist/runtime/types'
 
-const authStore = useAuthStore()
-const loading = computed(() => authStore.loading)
+const adminStore = useAdminAuthStore()
+const loading = computed(() => adminStore.loading)
 
 const schema = z.object({
     login: z.string()
@@ -61,7 +61,7 @@ const onSubmit = async (event: FormSubmitEvent<typeof schema>) => {
     error.value = null;
 
     try {
-        const result = await authStore.login({
+        const result = await adminStore.login({
             login: formState.login,
             password: formState.password
         });
