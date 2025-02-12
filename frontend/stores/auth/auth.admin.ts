@@ -1,11 +1,10 @@
-// stores/auth/admin.auth.ts
+// stores/auth.admin.ts
 import { defineStore } from 'pinia';
 import { useApi } from '~/composables/useApi';
-import type { AdminLoginCredentials, Admin, AuthResponse } from '~/types';
+import type { Admin, AdminLoginCredentials, AuthResponse, ApiResponse } from '~/types';
 
 interface AdminAuthState {
   user: Admin | null;
-  token: string | null;
   loading: boolean;
   error: string | null;
   initialized: boolean;
@@ -14,39 +13,29 @@ interface AdminAuthState {
 export const useAdminAuthStore = defineStore('auth/admin', {
   state: (): AdminAuthState => ({
     user: null,
-    token: null,
     loading: false,
     error: null,
     initialized: false,
   }),
 
   getters: {
-    isAuthenticated: (state): boolean => Boolean(state.token && state.user),
+    isAuthenticated: (state): boolean => Boolean(state.user),
     isAdmin: (state): boolean => state.user?.role === 'admin',
   },
 
   actions: {
     setAuth(response: AuthResponse) {
-      const { fetchApi, setAuthToken } = useApi();
-
       if (response.entity.role !== 'admin') {
         throw new Error('Invalid response entity type');
       }
-
       this.user = response.entity;
-      this.token = response.access_token;
       this.initialized = true;
-      setAuthToken(response.access_token);
     },
 
     clearAuth() {
-      const { clearAuthToken } = useApi();
-
       this.user = null;
-      this.token = null;
       this.error = null;
       this.initialized = false;
-      clearAuthToken();
     },
 
     async login(credentials: AdminLoginCredentials) {
@@ -55,13 +44,16 @@ export const useAdminAuthStore = defineStore('auth/admin', {
       this.error = null;
 
       try {
+        // Здесь указываем, что ожидаем AuthResponse внутри ApiResponse
         const response = await fetchApi<AuthResponse>('/api/auth/admin/login', {
           method: 'POST',
           body: credentials,
+          withCredentials: true,
         });
 
-        this.setAuth(response);
-        return response;
+        // Теперь response.data содержит AuthResponse
+        this.setAuth(response.data);
+        return response.data;
       } catch (error: any) {
         this.error = error.message;
         throw error;
@@ -71,8 +63,14 @@ export const useAdminAuthStore = defineStore('auth/admin', {
     },
 
     async logout() {
+      const { fetchApi } = useApi();
       this.loading = true;
+
       try {
+        await fetchApi('/api/auth/admin/logout', {
+          method: 'POST',
+          withCredentials: true,
+        });
         this.clearAuth();
       } finally {
         this.loading = false;
@@ -80,20 +78,17 @@ export const useAdminAuthStore = defineStore('auth/admin', {
     },
 
     async initializeAuth() {
-      const { fetchApi, getAuthToken } = useApi();
-      const token = getAuthToken();
-
-      if (!token) {
-        this.clearAuth();
-        return;
-      }
+      const { fetchApi } = useApi();
 
       try {
-        const response = await fetchApi<Admin>('/api/admins/profile');
+        // Здесь мы ожидаем Admin внутри ApiResponse
+        const response = await fetchApi<Admin>('/api/admins/profile', {
+          withCredentials: true,
+        });
 
-        if (response && response.role === 'admin') {
-          this.user = response;
-          this.token = token;
+        // response.data содержит Admin
+        if (response.data && response.data.role === 'admin') {
+          this.user = response.data;
           this.initialized = true;
         } else {
           this.clearAuth();
@@ -105,6 +100,6 @@ export const useAdminAuthStore = defineStore('auth/admin', {
   },
 
   persist: {
-    paths: ['token', 'user'],
+    paths: ['user', 'initialized'],
   },
 });

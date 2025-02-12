@@ -23,10 +23,10 @@
 <script setup lang="ts">
 import InputForm from '~/components/UI/InputForm.vue'
 import { z } from 'zod'
-import { useAdminAuthStore } from '~/stores/auth/auth.admin'
 import { computed, reactive, ref } from 'vue'
 import { navigateTo } from 'nuxt/app'
 import type { FormSubmitEvent } from '@nuxt/ui/dist/runtime/types'
+import { useAdminAuthStore } from '~/stores/auth/auth.admin'
 
 const adminStore = useAdminAuthStore()
 const loading = computed(() => adminStore.loading)

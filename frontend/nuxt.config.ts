@@ -1,40 +1,48 @@
-// nuxt.config.ts
 export default defineNuxtConfig({
   modules: ['@nuxtjs/tailwindcss', '@nuxt/ui', '@pinia/nuxt'],
   css: ['@/assets/global.css'],
+
   devServer: {
     port: 3000,
   },
+
   runtimeConfig: {
     public: {
-      apiBaseUrl: 'http://localhost:3001',
+      apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:3001',
     },
   },
+
+  nitro: {
+    devProxy: {
+      '/api': {
+        target: process.env.API_BASE_URL || 'http://localhost:3001',
+        changeOrigin: true,
+        cookieDomainRewrite: {
+          '*': '',
+        },
+        secure: false,
+      },
+    },
+  },
+
   tailwindcss: {
     exposeConfig: true,
     config: './tailwind.config.ts',
   },
+
   app: {
     head: {
       title: 'Кадастровые услуги',
       meta: [{ charset: 'utf-8' }, { name: 'viewport', content: 'width=device-width, initial-scale=1' }],
     },
   },
-  postcss: {
-    plugins: {
-      'postcss-import': {},
-      'tailwindcss/nesting': {},
-      tailwindcss: {},
-      autoprefixer: {},
-    },
-  },
+
   imports: {
-    dirs: [
-      './composables',
-      './types', // обновлено
-    ],
+    dirs: ['./composables', './types', './stores'],
   },
+
   typescript: {
+    strict: true,
     tsConfig: {
       compilerOptions: {
         paths: {
@@ -44,14 +52,27 @@ export default defineNuxtConfig({
       },
     },
   },
+
   pinia: {
     autoImports: ['defineStore', 'storeToRefs'],
   },
+
   ui: {
     global: true,
   },
+
   build: {
     transpile: ['gsap'],
   },
-  compatibilityDate: '2025-01-16',
+
+  postcss: {
+    plugins: {
+      'postcss-import': {},
+      'tailwindcss/nesting': {},
+      tailwindcss: {},
+      autoprefixer: {},
+    },
+  },
+
+  compatibilityDate: '2025-02-12',
 });

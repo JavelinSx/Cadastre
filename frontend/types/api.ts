@@ -1,18 +1,25 @@
 // types/api.ts
-export type HTTPMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-
-export interface APIResponse<T> {
+export interface ApiResponse<T> {
   data: T;
   status: number;
+  message?: string;
+}
+
+export interface AuthTokens {
+  access_token: string;
+  refresh_token?: string;
 }
 
 export interface FetchOptions {
-  method?: HTTPMethod;
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   headers?: Record<string, string>;
   body?: any;
-  params?: Record<string, string>;
-  query?: Record<string, string>;
-  timeout?: number;
-  baseURL?: string;
-  credentials?: RequestCredentials;
+  withCredentials?: boolean;
+}
+
+export interface CustomFetchOptions {
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  headers?: Record<string, string>;
+  body?: any;
+  withCredentials?: boolean;
 }
