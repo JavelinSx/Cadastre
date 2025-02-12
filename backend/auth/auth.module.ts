@@ -19,8 +19,8 @@ import { UserAuthController } from './controllers/auth.controller.user';
 
 // Guards
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { AdminAuthGuard } from 'guards/admin-auth.guard';
-import { UserAuthGuard } from 'guards/user-auth.guard';
+import { AdminAuthGuard } from './guards/auth.admin.guard';
+import { UserAuthGuard } from './guards/auth.user.guard';
 
 @Module({
   imports: [

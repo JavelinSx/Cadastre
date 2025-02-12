@@ -8,7 +8,7 @@ export class CreateAdminDto {
   @Matches(/^[a-zA-Z0-9_-]*$/, {
     message: 'Username can only contain letters, numbers, underscores and dashes',
   })
-  name: string;
+  login: string;
 
   @IsString()
   @MinLength(10)

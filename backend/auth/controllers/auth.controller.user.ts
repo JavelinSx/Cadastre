@@ -1,7 +1,7 @@
 // auth/controllers/user-auth.controller.ts
 import { Body, Controller, HttpCode, HttpStatus, Post, UnauthorizedException } from '@nestjs/common';
-import { UserLoginDto } from 'auth/dto/auth.login-user.dto';
-import { UserAuthService } from 'auth/services/auth.service.user';
+import { UserLoginDto } from '../dto/auth.login-user.dto';
+import { UserAuthService } from '../../auth/services/auth.service.user';
 
 @Controller('auth/users')
 export class UserAuthController {
