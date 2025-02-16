@@ -5,141 +5,182 @@
             <h2 class="text-xl font-semibold">Создание клиента</h2>
         </template>
 
-        <UForm :schema="schema" :state="formState" @submit="onSubmit" class="flex flex-col gap-2">
-            <!-- Переключатель типа контакта -->
+        <form @submit.prevent="onSubmit" class="flex flex-col gap-4">
+            <!-- Previous template code remains the same -->
             <div class="flex gap-4 mb-4">
                 <URadio v-model="contactType" value="email" label="Email" name="contact-type" />
                 <URadio v-model="contactType" value="phone" label="Телефон" name="contact-type" />
             </div>
 
-            <!-- Динамическое поле контакта -->
-            <InputForm v-model="formState[contactType]" :name="contactType"
+            <InputForm :model-value="getContactValue" @update:model-value="updateContactValue" :name="contactType"
                 :label="contactType === 'email' ? 'Почта' : 'Телефон'"
                 :placeholder="contactType === 'email' ? 'example@mail.com' : '+7 999 999 99 99'"
-                :error="errors[contactType]" :type="contactType === 'email' ? 'email' : 'tel'" />
+                :error="errors[contactType]" :type="contactType === 'email' ? 'email' : 'tel'"
+                @blur="validateContact" />
 
-            <InputForm v-model="formState.password" name="password" label="Пароль" placeholder="Введите пароль"
-                type="password" :show-password-toggle="true" :error="errors.password" />
+            <InputForm v-model="formData.password" name="password" label="Пароль" placeholder="Введите пароль"
+                type="password" :show-password-toggle="true" :error="errors.password" @blur="validatePassword" />
 
-            <div v-if="error" class="text-red-500 mb-4">
-                {{ error }}
+            <div v-if="globalError" class="text-red-500 text-sm">
+                {{ globalError }}
             </div>
 
-            <UButton type="submit" :loading="loading" class="mt-4 flex flex-row items-center justify-center pt-2 pb-2">
+            <UButton type="submit" :loading="loading" :disabled="hasErrors || loading" class="mt-4">
                 {{ loading ? 'Создание...' : 'Создать' }}
             </UButton>
-        </UForm>
+        </form>
     </UCard>
 </template>
 
 <script setup lang="ts">
-import InputForm from './UI/InputForm'
-import { computed, reactive, ref } from 'vue'
+import { ref, reactive, computed } from 'vue'
+import type { CreateUserData } from '~/types'
 import { useAdminUsersStore } from '~/stores/admin/users'
-import { z } from 'zod'
-import type { FormSubmitEvent } from '@nuxt/ui/dist/runtime/types'
+import { useToast } from 'vue-toastification'
+import InputForm from './UI/InputForm.vue'
+type ContactType = 'email' | 'phone'
 
 const adminUsersStore = useAdminUsersStore()
 const loading = ref(false)
-const contactType = ref<'email' | 'phone'>('email')
-const error = ref<string | null>(null)
+const contactType = ref<ContactType>('email')
+const globalError = ref('')
+const toast = useToast()
 
-const formState = reactive({
+// Previous code with types and validations remains the same...
+interface FormData {
+    email: string;
+    phone: string;
+    password: string;
+}
+
+interface FormErrors {
+    email: string;
+    phone: string;
+    password: string;
+}
+
+const formData = reactive<FormData>({
     email: '',
     phone: '',
     password: ''
 })
 
-const errors = reactive({
+const errors = reactive<FormErrors>({
     email: '',
     phone: '',
     password: ''
 })
 
-// Динамическая схема валидации в зависимости от типа контакта
-const schema = computed(() => {
-    const baseSchema = {
-        password: z.string()
-            .min(10, 'Минимум 10 символов')
-            .regex(
-                /^[A-Za-z0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/,
-                'Недопустимые символы в пароле'
-            )
+// All previous validation methods remain the same...
+const getContactValue = computed(() => formData[contactType.value])
+
+const updateContactValue = (value: string) => {
+    formData[contactType.value] = value
+}
+
+const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+}
+
+const validatePhone = (phone: string): boolean => {
+    const phoneRegex = /^\+?[\d\s-]{10,}$/
+    return phoneRegex.test(phone)
+}
+
+const validatePassword = () => {
+    const password = formData.password
+    if (password.length < 10) {
+        errors.password = 'Минимум 10 символов'
+        return false
+    }
+    if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{10,}$/.test(password)) {
+        errors.password = 'Пароль должен содержать буквы и цифры'
+        return false
+    }
+    errors.password = ''
+    return true
+}
+
+const validateContact = () => {
+    const value = formData[contactType.value]
+    if (!value) {
+        errors[contactType.value] = `${contactType.value === 'email' ? 'Email' : 'Телефон'} обязателен`
+        return false
     }
 
     if (contactType.value === 'email') {
-        return z.object({
-            ...baseSchema,
-            email: z.string()
-                .email('Введите корректный email')
-                .min(1, 'Email обязателен'),
-            phone: z.string().optional()
-        })
+        if (!validateEmail(value)) {
+            errors.email = 'Некорректный email'
+            return false
+        }
     } else {
-        return z.object({
-            ...baseSchema,
-            phone: z.string()
-                .regex(/^\+?[\d\s-]{10,}$/, 'Введите корректный номер телефона')
-                .min(1, 'Телефон обязателен'),
-            email: z.string().optional()
-        })
+        if (!validatePhone(value)) {
+            errors.phone = 'Некорректный номер телефона'
+            return false
+        }
     }
-})
 
-const clearErrors = () => {
-    errors.email = ''
-    errors.phone = ''
-    errors.password = ''
-    error.value = null
+    errors[contactType.value] = ''
+    return true
 }
 
-const onSubmit = async (event: FormSubmitEvent<typeof schema>) => {
-    clearErrors()
+const hasErrors = computed(() => {
+    return Object.values(errors).some(error => error !== '') ||
+        !formData[contactType.value] ||
+        !formData.password
+})
+
+const clearForm = () => {
+    formData.email = ''
+    formData.phone = ''
+    formData.password = ''
+    globalError.value = ''
+    Object.keys(errors).forEach(key => {
+        errors[key as keyof FormErrors] = ''
+    })
+}
+
+const onSubmit = async () => {
+    if (!validateContact() || !validatePassword()) {
+        return
+    }
+
     loading.value = true
+    globalError.value = ''
 
     try {
-        const userData = {
-            password: formState.password,
-            [contactType.value]: formState[contactType.value]
+        const userData: CreateUserData = {
+            password: formData.password,
+            [contactType.value]: formData[contactType.value]
         }
 
         await adminUsersStore.createUser(userData)
 
-        // Очищаем форму после успешного создания
-        formState.email = ''
-        formState.phone = ''
-        formState.password = ''
-
-        // Показываем уведомление об успехе
-        const { toast } = useToast()
-        toast({
-            title: 'Успешно',
-            description: 'Клиент успешно создан',
-            color: 'green'
+        toast.success('Клиент успешно создан', {
+            timeout: 3000
         })
 
-    } catch (e: any) {
-        // Обработка ошибок
-        if (e.response?.status === 409) {
-            error.value = 'Пользователь с таким email/телефоном уже существует'
-        } else if (e.message === 'Network Error') {
-            error.value = 'Ошибка сети. Проверьте подключение'
+        clearForm()
+    } catch (error: any) {
+        if (error.response?.status === 409) {
+            globalError.value = `${contactType.value === 'email' ? 'Email' : 'Телефон'} уже используется`
+            toast.error(`${contactType.value === 'email' ? 'Email' : 'Телефон'} уже используется`, {
+                timeout: 5000
+            })
+        } else if (error.message === 'Network Error') {
+            globalError.value = 'Ошибка сети. Проверьте подключение'
+            toast.error('Ошибка сети. Проверьте подключение', {
+                timeout: 5000
+            })
         } else {
-            error.value = e.message || 'Произошла ошибка при создании клиента'
-        }
-
-        // Обработка ошибок валидации
-        if (e.response?.data?.errors) {
-            errors.email = e.response.data.errors.email?.[0] || ''
-            errors.phone = e.response.data.errors.phone?.[0] || ''
-            errors.password = e.response.data.errors.password?.[0] || ''
+            globalError.value = error.message || 'Произошла ошибка при создании клиента'
+            toast.error('Произошла ошибка при создании клиента', {
+                timeout: 5000
+            })
         }
     } finally {
         loading.value = false
     }
-}
-
-function useToast(): { toast: any } {
-    throw new Error('Function not implemented.')
 }
 </script>

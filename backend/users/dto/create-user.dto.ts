@@ -12,22 +12,22 @@ import {
 
 export class CreateUserDto {
   @IsOptional()
-  @IsEmail()
+  @IsEmail({}, { message: 'Неверный формат email' })
   email?: string;
 
   @IsOptional()
-  @IsPhoneNumber()
+  @IsPhoneNumber('RU', { message: 'Неверный формат телефона' })
   phone?: string;
 
   @ValidateIf((o) => !o.email && !o.phone)
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Необходимо указать email или телефон' })
   @IsString()
-  message = 'Either email or phone is required';
+  message = 'Необходимо указать email или телефон';
 
   @IsString()
-  @MinLength(6)
-  @Matches(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/, {
-    message: 'Password must contain at least one letter and one number',
+  @MinLength(10, { message: 'Пароль должен содержать минимум 10 символов' })
+  @Matches(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{10,}$/, {
+    message: 'Пароль должен содержать буквы и цифры',
   })
   password: string;
 }

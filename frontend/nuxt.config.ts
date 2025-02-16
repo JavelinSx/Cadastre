@@ -1,6 +1,6 @@
 export default defineNuxtConfig({
   modules: ['@nuxtjs/tailwindcss', '@nuxt/ui', '@pinia/nuxt'],
-  css: ['@/assets/global.css'],
+  css: ['@/assets/global.css', '@/assets/css/toast.css'],
 
   devServer: {
     port: 3000,
@@ -11,16 +11,17 @@ export default defineNuxtConfig({
       apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:3001',
     },
   },
-
   nitro: {
     devProxy: {
-      '/api': {
+      // Проксировать только запросы, начинающиеся с /api/, за исключением тех, что идут к /api/_nuxt_icon
+      '^/api/(?!_nuxt_icon)': {
         target: process.env.API_BASE_URL || 'http://localhost:3001',
         changeOrigin: true,
-        cookieDomainRewrite: {
-          '*': '',
-        },
+        cookieDomainRewrite: { '*': '' },
         secure: false,
+        headers: {
+          'Access-Control-Allow-Credentials': 'true',
+        },
       },
     },
   },
@@ -59,10 +60,11 @@ export default defineNuxtConfig({
 
   ui: {
     global: true,
+    icons: ['heroicons'],
   },
 
   build: {
-    transpile: ['gsap'],
+    transpile: ['gsap', 'vue-toastification'],
   },
 
   postcss: {

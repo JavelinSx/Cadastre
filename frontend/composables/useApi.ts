@@ -1,83 +1,58 @@
-// types/api.ts
-
-// Переименуем наш интерфейс, чтобы избежать конфликта
-export interface CustomFetchOptions {
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-  headers?: Record<string, string>;
-  body?: any;
-  withCredentials?: boolean;
-}
-
 // composables/useApi.ts
-import { navigateTo, useCookie, useRuntimeConfig } from 'nuxt/app';
-import type { ApiResponse, AuthTokens, FetchOptions } from '~/types';
+import { navigateTo, useRuntimeConfig } from 'nuxt/app';
+import type { ApiResponse, FetchOptions } from '~/types';
+import { useAdminAuthStore } from '~/stores/auth/auth.admin';
+import { useUserAuthStore } from '~/stores/auth/auth.user';
 
 export const useApi = () => {
   const config = useRuntimeConfig();
-  const baseURL = config.public.apiBaseUrl || ''; // Добавляем дефолтное значение
+  const baseURL = config.public.apiBaseUrl || '';
 
-  const COOKIE_CONFIG = {
-    auth: {
-      name: 'auth_token',
-      options: {
-        maxAge: 60 * 60 * 24 * 7, // 7 дней
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        httpOnly: true,
-      },
-    },
-  } as const;
+  const determineAuthType = (url: string): 'admin' | 'user' | null => {
+    const adminStore = useAdminAuthStore();
+    const userStore = useUserAuthStore();
 
-  const getAuthToken = (): string | null => {
-    const authCookie = useCookie<string>(COOKIE_CONFIG.auth.name);
-    return authCookie.value || null;
+    // Определяем тип по URL и текущей авторизации
+    if (url.includes('/api/admin') && adminStore.isAuthenticated) return 'admin';
+    if (url.includes('/api/users') && userStore.isAuthenticated) return 'user';
+    if (adminStore.isAuthenticated) return 'admin';
+    if (userStore.isAuthenticated) return 'user';
+    return null;
   };
 
-  const setAuthToken = (token: string): void => {
-    const authCookie = useCookie(COOKIE_CONFIG.auth.name, COOKIE_CONFIG.auth.options);
-    authCookie.value = token;
-  };
+  const handleApiError = (error: any, url: string) => {
+    const adminStore = useAdminAuthStore();
+    const userStore = useUserAuthStore();
 
-  const removeAuthToken = (): void => {
-    const authCookie = useCookie(COOKIE_CONFIG.auth.name);
-    authCookie.value = null;
-  };
+    if (error.response?.status === 401) {
+      const authType = determineAuthType(url);
 
-  const verifyToken = async (): Promise<boolean> => {
-    const token = getAuthToken();
-    if (!token) return false;
-
-    try {
-      const response = await $fetch<ApiResponse<{ valid: boolean }>>('/api/auth/verify', {
-        // Используем as string для явного приведения типа
-        baseURL: baseURL as string,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      return response.data.valid;
-    } catch (error) {
-      console.error('Token verification error:', error);
-      return false;
+      // Очищаем авторизацию только для соответствующего типа запроса
+      if (authType === 'admin' && url.includes('/api/admin')) {
+        adminStore.clearAuth();
+        navigateTo('/login-admin');
+      } else if (authType === 'user' && url.includes('/api/users')) {
+        userStore.clearAuth();
+        navigateTo('/login');
+      }
     }
+
+    const enhancedError = new Error(error.response?.data?.message || error.message || 'Unknown error occurred');
+    enhancedError.cause = error;
+    throw enhancedError;
   };
 
-  const fetchApi = async <T>(url: string, options: FetchOptions = {}): Promise<ApiResponse<T>> => {
-    const token = getAuthToken();
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    };
-
+  const fetchApi = async <T>(url: string, options: FetchOptions = {}): Promise<T> => {
     try {
-      const response = await $fetch<ApiResponse<T>>(url, {
-        baseURL: baseURL as string,
-        credentials: options.withCredentials ? 'include' : 'same-origin',
-        headers,
-        method: options.method,
+      const response = await $fetch<T>(url, {
+        baseURL,
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          ...options.headers,
+        },
+        method: options.method || 'GET',
         ...(options.body && {
           body: JSON.stringify(options.body),
         }),
@@ -85,38 +60,18 @@ export const useApi = () => {
 
       return response;
     } catch (error: any) {
-      if (error.response?.status === 401) {
-        removeAuthToken();
-        navigateTo('/login');
-      }
-
-      throw new Error(error.response?._data?.message || 'Произошла ошибка при выполнении запроса');
+      return handleApiError(error, url);
     }
   };
 
-  const refreshToken = async (): Promise<AuthTokens> => {
-    try {
-      const response = await fetchApi<AuthTokens>('/api/auth/refresh', {
-        method: 'POST',
-      });
-
-      if (response.data.access_token) {
-        setAuthToken(response.data.access_token);
-      }
-
-      return response.data;
-    } catch (error) {
-      removeAuthToken();
-      throw error;
-    }
-  };
+  const isSuccessStatus = (status: number): boolean => status >= 200 && status < 300;
+  const isClientError = (status: number): boolean => status >= 400 && status < 500;
+  const isServerError = (status: number): boolean => status >= 500;
 
   return {
     fetchApi,
-    getAuthToken,
-    setAuthToken,
-    removeAuthToken,
-    verifyToken,
-    refreshToken,
+    isSuccessStatus,
+    isClientError,
+    isServerError,
   };
 };

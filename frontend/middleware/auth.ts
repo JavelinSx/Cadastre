@@ -1,146 +1,74 @@
-// types/route.ts
+import { defineNuxtRouteMiddleware, navigateTo } from 'nuxt/app';
+import { useAdminAuthStore } from '~/stores/auth/auth.admin';
+import { useUserAuthStore } from '~/stores/auth/auth.user';
+
 export interface RouteConfig {
   path: string;
   requiresAuth: boolean;
   allowedRoles?: ('admin' | 'user')[];
 }
 
-import { defineNuxtRouteMiddleware, navigateTo } from 'nuxt/app';
-// middleware/auth.ts
-import { useAdminAuthStore } from '~/stores/auth/auth.admin';
-import { useUserAuthStore } from '~/stores/auth/auth.user';
-
 export default defineNuxtRouteMiddleware(async (to) => {
   const adminAuthStore = useAdminAuthStore();
   const userAuthStore = useUserAuthStore();
 
-  // Конфигурация маршрутов
-  const routeConfig: Record<string, RouteConfig> = {
-    // Публичные маршруты
-    '/': { path: '/', requiresAuth: false },
-    '/login': { path: '/login', requiresAuth: false },
-    '/login-admin': { path: '/login-admin', requiresAuth: false },
-    '/register': { path: '/register', requiresAuth: false },
-    '/services': { path: '/services', requiresAuth: false },
+  // Публичные маршруты не требуют авторизации
+  const publicRoutes = ['/login', '/login-admin', '/register', '/services', '/'];
 
-    // Маршруты админа
-    '/admin/orders': {
-      path: '/admin/orders',
-      requiresAuth: true,
-      allowedRoles: ['admin'],
-    },
-    '/admin/users': {
-      path: '/admin/users',
-      requiresAuth: true,
-      allowedRoles: ['admin'],
-    },
-    '/admin/chats': {
-      path: '/admin/chats',
-      requiresAuth: true,
-      allowedRoles: ['admin'],
-    },
+  // Маршруты администратора
+  const adminRoutes = ['/admin', '/admin/orders', '/admin/users', '/admin/chats'];
 
-    // Маршруты пользователя
-    '/dashboard': {
-      path: '/dashboard',
-      requiresAuth: true,
-      allowedRoles: ['user'],
-    },
-    '/orders': {
-      path: '/orders',
-      requiresAuth: true,
-      allowedRoles: ['user'],
-    },
-    '/chat': {
-      path: '/chat',
-      requiresAuth: true,
-      allowedRoles: ['user'],
-    },
-  };
+  // Маршруты пользователя
+  const userRoutes = ['/dashboard', '/orders', '/chat'];
 
-  /**
-   * Функция проверки авторизации
-   */
-  const checkAuth = async () => {
-    // Если не инициализированы - инициализируем
-    if (!adminAuthStore.initialized) {
-      await adminAuthStore.initializeAuth();
-    }
-    if (!userAuthStore.initialized) {
-      await userAuthStore.initializeAuth();
-    }
+  const path = to.path;
 
-    return {
-      isAdmin: adminAuthStore.isAuthenticated,
-      isUser: userAuthStore.isAuthenticated,
-    };
-  };
+  // Инициализация состояния аутентификации
+  if (!adminAuthStore.initialized) {
+    await adminAuthStore.initializeAuth();
+  }
+  if (!userAuthStore.initialized) {
+    await userAuthStore.initializeAuth();
+  }
 
-  /**
-   * Получаем конфигурацию текущего маршрута
-   */
-  const getCurrentRouteConfig = (path: string): RouteConfig | null => {
-    // Сначала проверяем точное совпадение
-    if (routeConfig[path]) {
-      return routeConfig[path];
-    }
-
-    // Затем проверяем вложенные маршруты админа
-    if (path.startsWith('/admin/')) {
-      return {
-        path,
-        requiresAuth: true,
-        allowedRoles: ['admin'],
-      };
-    }
-
-    // Затем проверяем защищенные маршруты пользователя
-    if (!Object.values(routeConfig).find((route) => route.path === path)) {
-      return {
-        path,
-        requiresAuth: true,
-        allowedRoles: ['user'],
-      };
-    }
-
-    return null;
-  };
+  const isAdmin = adminAuthStore.isAuthenticated;
+  const isUser = userAuthStore.isAuthenticated;
 
   try {
-    const { isAdmin, isUser } = await checkAuth();
-    const currentRoute = getCurrentRouteConfig(to.path);
-
-    // Если маршрут не найден - пропускаем
-    if (!currentRoute) {
+    // Особая обработка страниц входа
+    if (path === '/login-admin') {
+      if (isAdmin) return navigateTo('/admin/orders');
       return;
     }
 
-    // Если маршрут не требует авторизации - пропускаем
-    if (!currentRoute.requiresAuth) {
-      // Если пользователь авторизован, редиректим на соответствующую dashboard
-      if (isAdmin) {
-        return navigateTo('/admin/orders');
-      }
-      if (isUser) {
-        return navigateTo('/dashboard');
-      }
+    if (path === '/login') {
+      if (isUser) return navigateTo('/dashboard');
+      if (isAdmin) return navigateTo('/admin/orders');
       return;
     }
 
-    // Проверяем права доступа
-    if (currentRoute.allowedRoles) {
-      const hasAccess =
-        (currentRoute.allowedRoles.includes('admin') && isAdmin) ||
-        (currentRoute.allowedRoles.includes('user') && isUser);
+    // Обработка публичных маршрутов
+    if (publicRoutes.includes(path)) {
+      if (isAdmin) return navigateTo('/admin/orders');
+      if (isUser) return navigateTo('/dashboard');
+      return;
+    }
 
-      if (!hasAccess) {
-        // Редиректим на соответствующую страницу входа
-        if (currentRoute.allowedRoles.includes('admin')) {
-          return navigateTo('/login-admin');
-        } else {
-          return navigateTo('/login');
-        }
-      }
+    // Проверка доступа к маршрутам администратора
+    if (path.startsWith('/admin')) {
+      if (!isAdmin) return navigateTo('/login-admin');
+      return;
+    }
+
+    // Проверка доступа к маршрутам пользователя
+    if (userRoutes.some((route) => path.startsWith(route))) {
+      if (!isUser) return navigateTo('/login');
+      return;
+    }
+
+    // Для всех остальных маршрутов требуется базовая авторизация
+    if (!isAdmin && !isUser) {
+      return navigateTo('/login');
     }
   } catch (error) {
     console.error('Auth middleware error:', error);

@@ -1,0 +1,26 @@
+/* assets/css/toast.css */
+.dark .Vue-Toastification__toast {
+    background-color: #374151;
+    color: #fff;
+}
+
+.dark .Vue-Toastification__toast--success {
+    background-color: #065f46;
+}
+
+.dark .Vue-Toastification__toast--error {
+    background-color: #991b1b;
+}
+
+.dark .Vue-Toastification__toast--warning {
+    background-color: #92400e;
+}
+
+.dark .Vue-Toastification__toast--info {
+    background-color: #1e40af;
+}
+
+.Vue-Toastification__toast {
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}

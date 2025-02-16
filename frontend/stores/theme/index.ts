@@ -1,25 +1,20 @@
+// stores/theme.ts
 import { defineStore } from 'pinia';
+import { storage, STORAGE_KEYS } from '~/utils/storage';
 
-interface ThemeSwitcher {
-  active: boolean;
+interface ThemeState {
+  isActive: boolean;
 }
 
 export const useThemeStore = defineStore('theme', {
-  state: (): ThemeSwitcher => ({
-    active: true,
+  state: (): ThemeState => ({
+    isActive: storage.get(STORAGE_KEYS.THEME) ?? false,
   }),
-
-  getters: {
-    isActive: (state) => state.active,
-  },
 
   actions: {
     switchTheme() {
-      this.active = !this.active;
+      this.isActive = !this.isActive;
+      storage.set(STORAGE_KEYS.THEME, this.isActive);
     },
-  },
-
-  persist: {
-    paths: ['active'],
   },
 });

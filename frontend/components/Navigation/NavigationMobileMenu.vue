@@ -4,33 +4,7 @@
         <UButton class="flex items-center p-2 border rounded-md" icon="i-heroicons-bars-3" color="red" variant="ghost"
             @click="isOpen = true" />
 
-        <USlideover v-model="isOpen" :ui="{
-            wrapper: 'fixed inset-0 flex z-50 justify-end',
-            overlay: {
-                background: 'bg-gray-950/50',
-                transition: {
-                    enter: 'ease-out duration-300',
-                    enterFrom: 'opacity-0',
-                    enterTo: 'opacity-100',
-                    leave: 'ease-in duration-200',
-                    leaveFrom: 'opacity-100',
-                    leaveTo: 'opacity-0'
-                }
-            },
-            base: 'relative flex-1 w-full max-w-xs flex flex-col bg-white dark:bg-gray-900',
-            padding: 'p-4',
-            width: 'w-screen max-w-xs',
-            background: 'bg-white dark:bg-gray-900',
-            shadow: 'shadow-lg',
-            transition: {
-                enter: 'transform transition ease-out duration-300',
-                enterFrom: 'translate-x-full',
-                enterTo: 'translate-x-0',
-                leave: 'transform transition ease-in duration-200',
-                leaveFrom: 'translate-x-0',
-                leaveTo: 'translate-x-full'
-            }
-        }">
+        <USlideover v-model="isOpen" :ui="uiConfig">
             <div class="flex flex-col h-full">
                 <div class="flex items-center justify-between p-4 border-b">
                     <NavigationLogo />
@@ -106,15 +80,15 @@ import { ref, computed } from 'vue'
 import type { MenuItem } from '~/types/menu'
 import { useAdminAuthStore } from '~/stores/auth/auth.admin'
 import { useUserAuthStore } from '~/stores/auth/auth.user'
-
+import { navigateTo } from 'nuxt/app'
 
 const adminAuthStore = useAdminAuthStore()
 const userAuthStore = useUserAuthStore()
 const isOpen = ref(false)
 
-const isAuthenticated = computed(() => adminAuthStore.isAuthenticated || userAuthStore.isAuthenticated)
-const isAdmin = computed(() => adminAuthStore.isAdmin)
-const isUser = computed(() => userAuthStore.isUser)
+const isAuthenticated = computed(() => Boolean(adminAuthStore.user || userAuthStore.user))
+const isAdmin = computed(() => adminAuthStore.user?.role === 'admin')
+const isUser = computed(() => userAuthStore.user?.role === 'user')
 const loading = computed(() => adminAuthStore.loading || userAuthStore.loading)
 
 const mainMenuItems: MenuItem[] = [
@@ -135,12 +109,45 @@ const adminMenuItems: MenuItem[] = [
 ]
 
 const handleLogout = async () => {
-    if (isAdmin.value) {
-        await adminAuthStore.logout()
-    } else if (isUser.value) {
-        await userAuthStore.logout()
+    try {
+        if (isAdmin.value) {
+            await adminAuthStore.logout()
+        } else if (isUser.value) {
+            await userAuthStore.logout()
+        }
+        isOpen.value = false
+        await navigateTo('/login')
+    } catch (error) {
+        console.error('Logout error:', error)
     }
-    isOpen.value = false
+}
+
+const uiConfig = {
+    wrapper: 'fixed inset-0 flex z-50 justify-end',
+    overlay: {
+        background: 'bg-gray-950/50',
+        transition: {
+            enter: 'ease-out duration-300',
+            enterFrom: 'opacity-0',
+            enterTo: 'opacity-100',
+            leave: 'ease-in duration-200',
+            leaveFrom: 'opacity-100',
+            leaveTo: 'opacity-0'
+        }
+    },
+    base: 'relative flex-1 w-full max-w-xs flex flex-col bg-white dark:bg-gray-900',
+    padding: 'p-4',
+    width: 'w-screen max-w-xs',
+    background: 'bg-white dark:bg-gray-900',
+    shadow: 'shadow-lg',
+    transition: {
+        enter: 'transform transition ease-out duration-300',
+        enterFrom: 'translate-x-full',
+        enterTo: 'translate-x-0',
+        leave: 'transform transition ease-in duration-200',
+        leaveFrom: 'translate-x-0',
+        leaveTo: 'translate-x-full'
+    }
 }
 </script>
 

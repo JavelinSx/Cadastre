@@ -4,7 +4,7 @@
             :class="{
                 '!text-yellow-500 !bg-amber-100 hover:text-yellow-600': !themeStore.isActive,
                 '!text-blue-500 !hover:text-blue-600 !border-blue-500': themeStore.isActive
-            }" :icon="themeStore.isActive ? 'i-heroicons-moon-20-solid' : 'i-heroicons-sun-20-solid'"
+            }" :icon="themeStore.isActive ? 'i-heroicons:moon-20-solid' : 'i-heroicons:sun-20-solid'"
             @click="handleThemeToggle" />
     </ClientOnly>
 </template>

@@ -1,3 +1,4 @@
+# pages/login-admin.vue
 <template>
     <UCard class="border p-8 rounded max-w-md mx-auto">
         <template #header>Форма авторизации</template>
@@ -28,8 +29,12 @@ import { navigateTo } from 'nuxt/app'
 import type { FormSubmitEvent } from '@nuxt/ui/dist/runtime/types'
 import { useAdminAuthStore } from '~/stores/auth/auth.admin'
 
-const adminStore = useAdminAuthStore()
-const loading = computed(() => adminStore.loading)
+
+
+const adminStore = useAdminAuthStore();
+
+
+const loading = computed(() => adminStore.loading);
 
 const schema = z.object({
     login: z.string()
@@ -41,30 +46,33 @@ const schema = z.object({
             /^[A-Za-z0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/,
             'Недопустимые символы в пароле'
         )
-})
+});
 
 const formState = reactive({
     login: '',
     password: ''
-})
+});
 
 const errors = reactive({
     login: '',
     password: ''
-})
+});
 
-const error = ref<string | null>(null)
+const error = ref<string | null>(null);
 
 const onSubmit = async (event: FormSubmitEvent<typeof schema>) => {
+    console.log('Submit attempt');
     errors.login = '';
     errors.password = '';
     error.value = null;
 
     try {
+
         const result = await adminStore.login({
             login: formState.login,
             password: formState.password
         });
+
 
         await navigateTo('/admin/orders');
     } catch (e: any) {

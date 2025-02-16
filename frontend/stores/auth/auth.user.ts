@@ -1,27 +1,30 @@
-// stores/auth/user.auth.ts
+// stores/auth/auth.user.ts
 import { defineStore } from 'pinia';
 import { useApi } from '~/composables/useApi';
-import type { User, UserLoginCredentials, AuthResponse, ApiResponse } from '~/types';
+import type { User, UserLoginCredentials, AuthResponse } from '~/types';
+import { storage, STORAGE_KEYS } from '~/utils/storage';
 
 interface UserAuthState {
   user: User | null;
-  token: string | null;
   loading: boolean;
   error: string | null;
   initialized: boolean;
 }
 
 export const useUserAuthStore = defineStore('auth/user', {
-  state: (): UserAuthState => ({
-    user: null,
-    token: null,
-    loading: false,
-    error: null,
-    initialized: false,
-  }),
+  state: (): UserAuthState => {
+    // Инициализация состояния из localStorage
+    const savedData = storage.get(STORAGE_KEYS.USER);
+    return {
+      user: savedData,
+      loading: false,
+      error: null,
+      initialized: Boolean(savedData),
+    };
+  },
 
   getters: {
-    isAuthenticated: (state): boolean => Boolean(state.token && state.user),
+    isAuthenticated: (state): boolean => Boolean(state.user),
     isUser: (state): boolean => state.user?.role === 'user',
     userEmail: (state): string | undefined => state.user?.email,
     userPhone: (state): string | undefined => state.user?.phone,
@@ -29,49 +32,44 @@ export const useUserAuthStore = defineStore('auth/user', {
 
   actions: {
     setAuth(authResponse: AuthResponse) {
-      const { setAuthToken } = useApi();
-
       if (authResponse.entity.role !== 'user') {
         throw new Error('Invalid response entity type');
       }
 
       this.user = authResponse.entity;
-      this.token = authResponse.access_token;
       this.initialized = true;
 
-      setAuthToken(authResponse.access_token);
+      // Сохраняем в localStorage
+      storage.set(STORAGE_KEYS.USER, authResponse.entity);
     },
 
     clearAuth() {
-      const { removeAuthToken } = useApi();
-
       this.user = null;
-      this.token = null;
       this.error = null;
       this.initialized = false;
 
-      removeAuthToken();
+      // Очищаем из localStorage
+      storage.remove(STORAGE_KEYS.USER);
     },
 
     async login(credentials: UserLoginCredentials) {
-      const { fetchApi } = useApi();
       this.loading = true;
       this.error = null;
 
       try {
+        const { fetchApi } = useApi();
         const response = await fetchApi<AuthResponse>('/api/auth/users/login', {
           method: 'POST',
           body: credentials,
           withCredentials: true,
         });
 
-        // Проверяем наличие данных
-        if (!response.data) {
+        if (!response) {
           throw new Error('Invalid response format');
         }
 
-        this.setAuth(response.data);
-        return response.data;
+        this.setAuth(response);
+        return response;
       } catch (error: any) {
         this.error = error.message;
         throw error;
@@ -83,17 +81,14 @@ export const useUserAuthStore = defineStore('auth/user', {
     async logout() {
       this.loading = true;
       try {
-        // Если нужен запрос на сервер при логауте
         const { fetchApi } = useApi();
         await fetchApi('/api/auth/users/logout', {
           method: 'POST',
           withCredentials: true,
         });
-
         this.clearAuth();
       } catch (error) {
         console.error('Logout error:', error);
-        // Всё равно очищаем состояние
         this.clearAuth();
       } finally {
         this.loading = false;
@@ -101,24 +96,17 @@ export const useUserAuthStore = defineStore('auth/user', {
     },
 
     async initializeAuth() {
-      const { fetchApi, getAuthToken } = useApi();
-      const token = getAuthToken();
-
-      if (!token) {
-        this.clearAuth();
-        return;
-      }
+      const { fetchApi } = useApi();
 
       try {
         const response = await fetchApi<User>('/api/users/profile', {
           withCredentials: true,
         });
 
-        // Проверяем наличие данных и роль
-        if (response.data && response.data.role === 'user') {
-          this.user = response.data;
-          this.token = token;
+        if (response && response.role === 'user') {
+          this.user = response;
           this.initialized = true;
+          storage.set(STORAGE_KEYS.USER, response);
         } else {
           this.clearAuth();
         }
@@ -128,13 +116,8 @@ export const useUserAuthStore = defineStore('auth/user', {
       }
     },
 
-    /**
-     * Обновление профиля пользователя
-     */
     async refreshProfile() {
-      if (!this.isAuthenticated) {
-        return;
-      }
+      if (!this.isAuthenticated) return;
 
       const { fetchApi } = useApi();
 
@@ -143,17 +126,13 @@ export const useUserAuthStore = defineStore('auth/user', {
           withCredentials: true,
         });
 
-        if (response.data && response.data.role === 'user') {
-          this.user = response.data;
+        if (response && response.role === 'user') {
+          this.user = response;
+          storage.set(STORAGE_KEYS.USER, response);
         }
       } catch (error) {
         console.error('Profile refresh error:', error);
-        // В случае ошибки авторизации clearAuth вызовется через перехватчик в useApi
       }
     },
-  },
-
-  persist: {
-    paths: ['token', 'user'],
   },
 });

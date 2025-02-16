@@ -8,7 +8,7 @@ interface BaseEntity {
 
 export interface Admin extends BaseEntity {
   role: 'admin';
-  name: string;
+  login: string;
 }
 
 export interface User extends BaseEntity {

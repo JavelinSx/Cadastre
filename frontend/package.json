@@ -19,10 +19,9 @@
     "gsap": "^3.12.7",
     "nuxt": "^3.15.2",
     "pinia": "^2.3.1",
-    "pinia-plugin-persistedstate": "^4.2.0",
     "vue": "latest",
     "vue-router": "latest",
-    "vuex": "^4.1.0",
+    "vue-toastification": "^2.0.0-rc.5",
     "zod": "^3.24.1"
   },
   "devDependencies": {
