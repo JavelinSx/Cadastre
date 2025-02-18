@@ -14,6 +14,7 @@ export interface FetchOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   headers?: Record<string, string>;
   body?: any;
+  params?: Record<string, any>;
   withCredentials?: boolean;
 }
 

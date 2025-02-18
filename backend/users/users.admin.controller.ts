@@ -7,11 +7,14 @@ import {
   ConflictException,
   InternalServerErrorException,
   BadRequestException,
+  Get,
+  Query,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { AdminAuthGuard } from '../guards/admin-auth.guard';
 import { UserDocument } from './schemas/user.schema';
+import { FilterQuery } from 'mongoose';
 
 @Controller('admin/users')
 @UseGuards(AdminAuthGuard)
@@ -59,6 +62,39 @@ export class UsersAdminController {
       // Логируем неожиданные ошибки
       console.error('Error creating user:', error);
       throw new InternalServerErrorException('Произошла ошибка при создании пользователя');
+    }
+  }
+
+  @Get()
+  async findAll(
+    @Query('search') search?: string,
+    @Query('isBlocked') isBlocked?: boolean,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('sortBy') sortBy: string = 'createdAt',
+    @Query('sortOrder') sortOrder: 'asc' | 'desc' = 'desc'
+  ) {
+    try {
+      // Формируем фильтр
+      const filter: FilterQuery<UserDocument> = {};
+
+      if (search) {
+        filter.$or = [
+          { email: new RegExp(search, 'i') },
+          { phone: new RegExp(search, 'i') },
+          { fullName: new RegExp(search, 'i') },
+        ];
+      }
+
+      if (isBlocked !== undefined) {
+        filter.isBlocked = isBlocked;
+      }
+
+      const result = await this.usersService.findAll(filter, page, limit, sortBy, sortOrder);
+
+      return result;
+    } catch (error) {
+      throw new InternalServerErrorException('Ошибка при получении списка пользователей');
     }
   }
 }

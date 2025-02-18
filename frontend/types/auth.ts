@@ -1,5 +1,7 @@
 // types/auth.ts
 
+import type { User } from './users';
+
 // Базовые типы
 interface BaseEntity {
   id: string;
@@ -9,12 +11,6 @@ interface BaseEntity {
 export interface Admin extends BaseEntity {
   role: 'admin';
   login: string;
-}
-
-export interface User extends BaseEntity {
-  role: 'user';
-  email?: string;
-  phone?: string;
 }
 
 export type AuthenticatedEntity = Admin | User;

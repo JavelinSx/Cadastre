@@ -19,13 +19,14 @@ export class AdminAuthController {
 
     const authResponse = await this.adminAuthService.login(admin);
 
-    // Устанавливаем httpOnly куки
+    // Enhanced cookie settings
     response.cookie('auth_token', authResponse.access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 дней
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       path: '/',
+      domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : 'localhost',
     });
 
     return authResponse;
@@ -34,7 +35,13 @@ export class AdminAuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(@Res({ passthrough: true }) response: Response) {
-    response.clearCookie('auth_token');
+    response.clearCookie('auth_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : 'localhost',
+    });
     return { message: 'Logged out successfully' };
   }
 }

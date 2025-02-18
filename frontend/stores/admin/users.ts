@@ -1,41 +1,61 @@
 // stores/admin/users.ts
 import { defineStore } from 'pinia';
 import { useApi } from '~/composables/useApi';
-import type { User, CreateUserData } from '~/types';
-import type { Order, OrderStatus } from '~/types';
+import type { DocumentStatus } from '~/types/documents';
+import type { User, UserResponse, UsersListResponse, UserFilter, CreateUserDto } from '~/types/users';
 
 interface UsersState {
   users: User[];
   selectedUser: User | null;
-  userOrders: Order[];
   loading: boolean;
   error: string | null;
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
 }
 
 export const useAdminUsersStore = defineStore('admin/users', {
   state: (): UsersState => ({
     users: [],
     selectedUser: null,
-    userOrders: [],
     loading: false,
     error: null,
+    pagination: {
+      total: 0,
+      page: 1,
+      limit: 10,
+      pages: 0,
+    },
   }),
 
   getters: {
     getUserById: (state) => (id: string) => state.users.find((user) => user.id === id),
 
-    getUserOrders: (state) => (userId: string) => state.userOrders.filter((order) => order.userId === userId),
+    getActiveUsers: (state) => state.users.filter((user) => !user.isBlocked),
+
+    getBlockedUsers: (state) => state.users.filter((user) => user.isBlocked),
   },
 
   actions: {
-    // Получение списка пользователей
-    async fetchUsers() {
+    async fetchUsers(filter: UserFilter = {}) {
       const { fetchApi } = useApi();
       this.loading = true;
-
       try {
-        const response = await fetchApi<User[]>('/api/admin/users');
-        this.users = response;
+        const response = await fetchApi<UsersListResponse>(`/api/admin/users`, {
+          params: {
+            search: filter.search,
+            isBlocked: filter.isBlocked,
+            sortBy: filter.sortBy || 'createdAt',
+            sortOrder: filter.sortOrder || 'desc',
+            page: filter.page || 1,
+            limit: filter.limit || 10,
+          },
+        });
+        this.users = response.users;
+        this.pagination = response.pagination;
       } catch (error: any) {
         this.error = error.message;
         throw error;
@@ -44,68 +64,33 @@ export const useAdminUsersStore = defineStore('admin/users', {
       }
     },
 
-    // Создание нового пользователя
-    async createUser(userData: CreateUserData) {
+    async updateDocumentStatus(
+      userId: string,
+      serviceId: string,
+      documentType: string,
+      status: DocumentStatus,
+      comment?: string
+    ) {
       const { fetchApi } = useApi();
       this.loading = true;
-
       try {
-        const response = await fetchApi<User>('/api/admin/users', {
+        const response = await fetchApi<UserResponse>(`/api/admin/users/${userId}/documents/status`, {
           method: 'POST',
-          body: userData,
+          body: {
+            serviceId,
+            documentType,
+            status,
+            comment,
+          },
         });
 
-        this.users.push(response);
-        return response;
-      } catch (error: any) {
-        this.error = error.message;
-        throw error;
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    // Удаление пользователя
-    async deleteUser(userId: string) {
-      const { fetchApi } = useApi();
-      this.loading = true;
-
-      try {
-        await fetchApi(`/api/admin/users/${userId}`, {
-          method: 'DELETE',
-        });
-
-        this.users = this.users.filter((user) => user.id !== userId);
-        if (this.selectedUser?.id === userId) {
-          this.selectedUser = null;
-        }
-      } catch (error: any) {
-        this.error = error.message;
-        throw error;
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    // Обновление пользователя
-    async updateUser(userId: string, userData: Partial<CreateUserData>) {
-      const { fetchApi } = useApi();
-      this.loading = true;
-
-      try {
-        const response = await fetchApi<User>(`/api/admin/users/${userId}`, {
-          method: 'PATCH',
-          body: userData,
-        });
-
-        const index = this.users.findIndex((user) => user.id === userId);
-        if (index !== -1) {
-          this.users[index] = response;
+        const userIndex = this.users.findIndex((user) => user.id === userId);
+        if (userIndex !== -1) {
+          this.users[userIndex] = response;
         }
         if (this.selectedUser?.id === userId) {
           this.selectedUser = response;
         }
-        return response;
       } catch (error: any) {
         this.error = error.message;
         throw error;
@@ -114,38 +99,20 @@ export const useAdminUsersStore = defineStore('admin/users', {
       }
     },
 
-    // Получение заказов пользователя
-    async fetchUserOrders(userId: string) {
+    async createUser(userData: CreateUserDto) {
       const { fetchApi } = useApi();
       this.loading = true;
+      this.error = null;
 
       try {
-        const response = await fetchApi<Order[]>(`/api/admin/users/${userId}/orders`);
-        this.userOrders = response;
-        return response;
-      } catch (error: any) {
-        this.error = error.message;
-        throw error;
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    // Обновление статуса заказа
-    async updateOrderStatus(orderId: string, status: OrderStatus) {
-      const { fetchApi } = useApi();
-      this.loading = true;
-
-      try {
-        const response = await fetchApi<Order>(`/api/admin/orders/${orderId}/status`, {
-          method: 'PATCH',
-          body: { status },
+        const response = await fetchApi<UserResponse>('/api/admin/users', {
+          method: 'POST',
+          body: userData,
         });
 
-        const orderIndex = this.userOrders.findIndex((order) => order.id === orderId);
-        if (orderIndex !== -1) {
-          this.userOrders[orderIndex] = response;
-        }
+        // Добавляем нового пользователя в список
+        this.users.unshift(response);
+
         return response;
       } catch (error: any) {
         this.error = error.message;
@@ -155,12 +122,58 @@ export const useAdminUsersStore = defineStore('admin/users', {
       }
     },
 
-    // Сброс состояния
-    clearState() {
-      this.users = [];
-      this.selectedUser = null;
-      this.userOrders = [];
-      this.error = null;
+    async addInteraction(
+      userId: string,
+      interaction: {
+        type: 'call' | 'chat' | 'office';
+        description: string;
+      }
+    ) {
+      const { fetchApi } = useApi();
+      this.loading = true;
+      try {
+        const response = await fetchApi<UserResponse>(`/api/admin/users/${userId}/interactions`, {
+          method: 'POST',
+          body: interaction,
+        });
+
+        const userIndex = this.users.findIndex((user) => user.id === userId);
+        if (userIndex !== -1) {
+          this.users[userIndex] = response;
+        }
+        if (this.selectedUser?.id === userId) {
+          this.selectedUser = response;
+        }
+      } catch (error: any) {
+        this.error = error.message;
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async toggleBlockUser(userId: string, isBlocked: boolean, reason?: string) {
+      const { fetchApi } = useApi();
+      this.loading = true;
+      try {
+        const response = await fetchApi<UserResponse>(`/api/admin/users/${userId}/block`, {
+          method: 'POST',
+          body: { isBlocked, reason },
+        });
+
+        const userIndex = this.users.findIndex((user) => user.id === userId);
+        if (userIndex !== -1) {
+          this.users[userIndex] = response;
+        }
+        if (this.selectedUser?.id === userId) {
+          this.selectedUser = response;
+        }
+      } catch (error: any) {
+        this.error = error.message;
+        throw error;
+      } finally {
+        this.loading = false;
+      }
     },
   },
 });
