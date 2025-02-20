@@ -91,7 +91,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useAdminUsersStore } from '~/stores/admin/users'
 import { useToast } from 'vue-toastification'
 import { useRouter } from 'vue-router'
-import CreateClientForm from '~/components/CreateClientForm.vue'
+import CreateClientForm from '~/components/Admin/CreateClientForm.vue'
 
 const router = useRouter()
 const toast = useToast()

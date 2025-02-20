@@ -34,10 +34,10 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
-import type { CreateUserData } from '~/types'
 import { useAdminUsersStore } from '~/stores/admin/users'
 import { useToast } from 'vue-toastification'
-import InputForm from './UI/InputForm.vue'
+import InputForm from '../UI/InputForm.vue'
+
 type ContactType = 'email' | 'phone'
 
 const adminUsersStore = useAdminUsersStore()
@@ -141,46 +141,40 @@ const clearForm = () => {
     })
 }
 
+const handleError = (error: any) => {
+    if (error.response?.status === 409) {
+        const contactTypeText = contactType.value === 'email' ? 'Email' : 'Телефон';
+        globalError.value = `${contactTypeText} уже используется`;
+        toast.error(`${contactTypeText} уже используется`);
+    } else if (error.message === 'Network Error') {
+        globalError.value = 'Ошибка сети. Проверьте подключение';
+        toast.error('Ошибка сети. Проверьте подключение');
+    } else {
+        globalError.value = error.message || 'Произошла ошибка при создании клиента';
+        toast.error('Произошла ошибка при создании клиента');
+    }
+};
+
 const onSubmit = async () => {
     if (!validateContact() || !validatePassword()) {
-        return
+        return;
     }
 
-    loading.value = true
-    globalError.value = ''
+    loading.value = true;
+    globalError.value = '';
 
     try {
-        const userData: CreateUserData = {
+        await adminUsersStore.createClient({
+            [contactType.value]: formData[contactType.value],
             password: formData.password,
-            [contactType.value]: formData[contactType.value]
-        }
+        });
 
-        await adminUsersStore.createUser(userData)
-
-        toast.success('Клиент успешно создан', {
-            timeout: 3000
-        })
-
-        clearForm()
+        toast.success('Клиент успешно создан');
+        clearForm();
     } catch (error: any) {
-        if (error.response?.status === 409) {
-            globalError.value = `${contactType.value === 'email' ? 'Email' : 'Телефон'} уже используется`
-            toast.error(`${contactType.value === 'email' ? 'Email' : 'Телефон'} уже используется`, {
-                timeout: 5000
-            })
-        } else if (error.message === 'Network Error') {
-            globalError.value = 'Ошибка сети. Проверьте подключение'
-            toast.error('Ошибка сети. Проверьте подключение', {
-                timeout: 5000
-            })
-        } else {
-            globalError.value = error.message || 'Произошла ошибка при создании клиента'
-            toast.error('Произошла ошибка при создании клиента', {
-                timeout: 5000
-            })
-        }
+        handleError(error);
     } finally {
-        loading.value = false
+        loading.value = false;
     }
-}
+};
 </script>

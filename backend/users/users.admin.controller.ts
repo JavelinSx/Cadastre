@@ -9,6 +9,8 @@ import {
   BadRequestException,
   Get,
   Query,
+  NotFoundException,
+  Param,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -20,7 +22,43 @@ import { FilterQuery } from 'mongoose';
 @UseGuards(AdminAuthGuard)
 export class UsersAdminController {
   constructor(private readonly usersService: UsersService) {}
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    console.log('Controller: получен запрос для ID:', id);
 
+    try {
+      const user = await this.usersService.findById(id);
+
+      if (!user) {
+        throw new NotFoundException('Пользователь не найден');
+      }
+
+      // Важно: преобразуем и проверим данные
+      const userData = user.toJSON();
+      console.log('Controller: данные пользователя:', userData);
+
+      return {
+        id: userData._id || userData.id,
+        fullName: userData.fullName,
+        email: userData.email,
+        phone: userData.phone,
+        documentChecklists: userData.documentChecklists || [],
+        services: userData.services || [],
+      };
+    } catch (error) {
+      console.error('Controller: ошибка:', error);
+
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      if (error.name === 'CastError') {
+        throw new BadRequestException('Неверный формат ID');
+      }
+
+      throw new InternalServerErrorException('Произошла ошибка при получении пользователя');
+    }
+  }
   @Post()
   async create(@Body() createUserDto: CreateUserDto) {
     try {

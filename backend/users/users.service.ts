@@ -1,13 +1,16 @@
 // users/users.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, FilterQuery, SortOrder } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
 import { DocumentStatus, DocumentCheckItem, UserDocumentChecklist } from '../types/documents';
 import * as bcrypt from 'bcrypt';
+import { ServiceStatus } from 'types/cadastral';
+import { CreateServiceDto, UpdateServiceStatusDto } from 'cadastral/dto';
 
 @Injectable()
 export class UsersService {
+  cadastralServiceModel: any;
   constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
   async findAll(
@@ -45,95 +48,164 @@ export class UsersService {
     return user.save();
   }
 
-  async initializeDocumentChecklist(userId: string, serviceId: string, requiredDocuments: string[]) {
-    const checklist: UserDocumentChecklist = {
-      serviceId,
-      documents: requiredDocuments.map((type) => ({
-        type,
-        status: DocumentStatus.PENDING,
-        isRequired: true,
-        updatedAt: new Date(),
-      })),
-      lastUpdated: new Date(),
-      status: DocumentStatus.PENDING,
-    };
+  async getUserServices(userId: string) {
+    const user = await this.userModel
+      .findById(userId)
+      .populate({
+        path: 'services',
+        model: 'CadastralService',
+        options: { sort: { createdAt: -1 } },
+      })
+      .exec();
 
-    return this.userModel.findByIdAndUpdate(userId, { $push: { documentChecklists: checklist } }, { new: true });
-  }
-
-  async updateDocumentStatus(
-    userId: string,
-    serviceId: string,
-    documentType: string,
-    status: DocumentStatus,
-    adminId: string,
-    comment?: string
-  ) {
-    const user = await this.userModel.findById(userId);
-    if (!user) throw new NotFoundException('Пользователь не найден');
-
-    const checklistIndex = user.documentChecklists.findIndex((cl) => cl.serviceId.toString() === serviceId);
-
-    if (checklistIndex === -1) throw new NotFoundException('Чеклист не найден');
-
-    const documentIndex = user.documentChecklists[checklistIndex].documents.findIndex(
-      (doc) => doc.type === documentType
-    );
-
-    if (documentIndex === -1) throw new NotFoundException('Документ не найден');
-
-    const updateQuery = {
-      [`documentChecklists.${checklistIndex}.documents.${documentIndex}.status`]: status,
-      [`documentChecklists.${checklistIndex}.documents.${documentIndex}.verifiedAt`]: new Date(),
-      [`documentChecklists.${checklistIndex}.documents.${documentIndex}.verifiedBy`]: adminId,
-      [`documentChecklists.${checklistIndex}.documents.${documentIndex}.comment`]: comment,
-      [`documentChecklists.${checklistIndex}.documents.${documentIndex}.updatedAt`]: new Date(),
-      [`documentChecklists.${checklistIndex}.lastUpdated`]: new Date(),
-    };
-
-    return this.userModel.findByIdAndUpdate(userId, { $set: updateQuery }, { new: true });
-  }
-
-  async addInteraction(
-    userId: string,
-    interaction: {
-      type: 'call' | 'chat' | 'office';
-      description: string;
-      adminId: string;
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
     }
-  ) {
-    return this.userModel.findByIdAndUpdate(
+
+    return user.services;
+  }
+
+  // Получение конкретной услуги пользователя
+  async getUserService(userId: string, serviceId: string) {
+    const user = await this.userModel
+      .findById(userId)
+      .populate({
+        path: 'services',
+        match: { _id: serviceId },
+        model: 'CadastralService',
+      })
+      .exec();
+
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    const service = user.services.find((service) => service.id === serviceId);
+    if (!service) {
+      throw new NotFoundException('Услуга не найдена');
+    }
+
+    return service;
+  }
+
+  // Добавление новой услуги пользователю
+  async addUserService(userId: string, createServiceDto: CreateServiceDto) {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    // Создаем новую услугу
+    const newService = new this.cadastralServiceModel({
       userId,
+      ...createServiceDto,
+      status: ServiceStatus.CONSULTATION,
+    });
+
+    const savedService = await newService.save();
+
+    // Добавляем ссылку на услугу в документ пользователя
+    await this.userModel.findByIdAndUpdate(userId, { $push: { services: savedService._id } });
+
+    return savedService;
+  }
+
+  // Обновление статуса услуги
+  async updateServiceStatus(userId: string, serviceId: string, updateStatusDto: UpdateServiceStatusDto) {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    // Проверяем, что услуга принадлежит пользователю
+    const serviceExists = user.services.some((service) => service.id === serviceId);
+    if (!serviceExists) {
+      throw new BadRequestException('Услуга не принадлежит данному пользователю');
+    }
+
+    // Обновляем статус услуги
+    const updatedService = await this.cadastralServiceModel.findByIdAndUpdate(
+      serviceId,
       {
-        $push: {
-          interactions: {
-            ...interaction,
-            date: new Date(),
-          },
+        $set: {
+          status: updateStatusDto.status,
+          ...(updateStatusDto.comment && { comment: updateStatusDto.comment }),
+          updatedAt: new Date(),
         },
       },
       { new: true }
     );
+
+    if (!updatedService) {
+      throw new NotFoundException('Услуга не найдена');
+    }
+
+    return updatedService;
   }
 
-  async toggleBlockUser(userId: string, isBlocked: boolean, reason?: string) {
-    return this.userModel.findByIdAndUpdate(
-      userId,
-      {
-        isBlocked,
-        blockReason: isBlocked ? reason : undefined,
-        lastVisit: new Date(),
+  // Получение статистики по услугам пользователя
+  async getUserServicesStats(userId: string) {
+    const services = await this.cadastralServiceModel.find({ userId }).exec();
+
+    return {
+      total: services.length,
+      byStatus: {
+        [ServiceStatus.CONSULTATION]: services.filter((s) => s.status === ServiceStatus.CONSULTATION).length,
+        [ServiceStatus.DOCUMENTS_COLLECTION]: services.filter((s) => s.status === ServiceStatus.DOCUMENTS_COLLECTION)
+          .length,
+        [ServiceStatus.OBJECT_SURVEY]: services.filter((s) => s.status === ServiceStatus.OBJECT_SURVEY).length,
+        [ServiceStatus.DRAWING_PREPARATION]: services.filter((s) => s.status === ServiceStatus.DRAWING_PREPARATION)
+          .length,
+        [ServiceStatus.PACKAGE_PREPARATION]: services.filter((s) => s.status === ServiceStatus.PACKAGE_PREPARATION)
+          .length,
+        [ServiceStatus.AWAITING_RESPONSE]: services.filter((s) => s.status === ServiceStatus.AWAITING_RESPONSE).length,
+        [ServiceStatus.REJECTED]: services.filter((s) => s.status === ServiceStatus.REJECTED).length,
+        [ServiceStatus.COMPLETED]: services.filter((s) => s.status === ServiceStatus.COMPLETED).length,
+        [ServiceStatus.READY_FOR_PAYMENT]: services.filter((s) => s.status === ServiceStatus.READY_FOR_PAYMENT).length,
       },
-      { new: true }
-    );
+      unpaid: services.filter((s) => !s.payment && s.status === ServiceStatus.READY_FOR_PAYMENT).length,
+    };
+  }
+
+  // Удаление услуги (только для администраторов)
+  async removeUserService(userId: string, serviceId: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    // Удаляем ссылку на услугу из документа пользователя
+    await this.userModel.findByIdAndUpdate(userId, { $pull: { services: serviceId } });
+
+    // Удаляем саму услугу
+    await this.cadastralServiceModel.findByIdAndDelete(serviceId);
+
+    return { message: 'Услуга успешно удалена' };
   }
 
   async findByEmail(email: string) {
     return this.userModel.findOne({ email }).exec();
   }
 
-  async findById(id: string) {
-    return this.userModel.findById(id).exec();
+  async findById(id: string): Promise<UserDocument | null> {
+    console.log('Service: поиск пользователя с ID:', id);
+
+    try {
+      const user = await this.userModel
+        .findById(id)
+        .populate({
+          path: 'services',
+          options: { sort: { createdAt: -1 } },
+        })
+        .populate('documentChecklists.documents')
+        .exec();
+
+      console.log('Service: пользователь найден:', user ? 'да' : 'нет');
+      return user;
+    } catch (error) {
+      console.error('Service: ошибка поиска пользователя:', error);
+      throw error;
+    }
   }
 
   async findByPhone(phone: string) {

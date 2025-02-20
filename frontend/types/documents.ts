@@ -1,35 +1,62 @@
 // types/documents.ts
-
-// Статус документа
 export enum DocumentStatus {
-  PENDING = 'pending', // Ожидает проверки
-  VERIFIED = 'verified', // Проверен и подтвержден
-  REJECTED = 'rejected', // Отклонен
+  PENDING = 'pending',
+  VERIFIED = 'verified',
+  REJECTED = 'rejected',
 }
 
-// Общие документы для всех услуг
 export enum CommonDocumentType {
-  PASSPORT = 'passport', // Паспорт
-  SNILS = 'snils', // СНИЛС
-  CONTACT = 'contact', // Контактные данные (телефон/почта)
-  PERSONAL_DATA = 'personal_data', // Согласие на обработку персональных данных
+  PASSPORT = 'passport',
+  SNILS = 'snils',
+  CONTACT = 'contact',
+  PERSONAL_DATA = 'personal_data',
 }
 
-// Интерфейс для документа в чеклисте
 export interface DocumentCheckItem {
-  type: string; // Тип документа (из CommonDocumentType или специфичный для услуги)
-  status: DocumentStatus; // Статус документа
-  verifiedAt?: Date; // Дата проверки
-  verifiedBy?: string; // ID администратора, проверившего документ
-  comment?: string; // Комментарий от администратора
-  isRequired: boolean; // Обязательный ли документ
-  updatedAt: Date; // Дата последнего обновления
+  type: string;
+  status: DocumentStatus;
+  isRequired: boolean;
+  comment?: string;
+  verifiedAt?: Date;
+  verifiedBy?: string;
+  updatedAt: Date;
 }
 
-// Интерфейс для чеклиста документов пользователя
-export interface UserDocumentChecklist {
-  serviceId: string; // ID услуги
-  documents: DocumentCheckItem[]; // Список документов для проверки
-  lastUpdated: Date; // Дата последнего обновления чеклиста
-  status: DocumentStatus; // Общий статус проверки документов
+export interface DocumentUpdate {
+  status: DocumentStatus;
+  comment?: string;
+  verifiedBy?: string;
 }
+
+// Специфические типы документов для разных услуг
+export enum LandSurveyDocumentType {
+  OWNERSHIP_DOCUMENT = 'ownership_document',
+  BOUNDARY_AGREEMENT = 'boundary_agreement',
+}
+
+export enum BuildingPlanDocumentType {
+  OWNERSHIP_DOCUMENT = 'ownership_document',
+  CONSTRUCTION_PERMIT = 'construction_permit',
+}
+
+export enum RoomPlanDocumentType {
+  OWNERSHIP_DOCUMENT = 'ownership_document',
+  FLOOR_PLAN = 'floor_plan',
+}
+
+export enum InspectionActDocumentType {
+  DEMOLITION_PERMIT = 'demolition_permit',
+}
+
+export enum LandLayoutDocumentType {
+  TERRITORY_PLAN = 'territory_plan',
+}
+
+// Объединяем все типы документов для упрощения проверок
+export type DocumentType =
+  | CommonDocumentType
+  | LandSurveyDocumentType
+  | BuildingPlanDocumentType
+  | RoomPlanDocumentType
+  | InspectionActDocumentType
+  | LandLayoutDocumentType;

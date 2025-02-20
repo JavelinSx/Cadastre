@@ -1,6 +1,14 @@
-import type { DocumentStatus, UserDocumentChecklist } from './documents';
-
 // types/user.ts
+import type { DocumentStatus, DocumentCheckItem } from './documents';
+import type { CadastralService } from './cadastral';
+
+export interface UserDocumentChecklist {
+  serviceId: string;
+  documents: DocumentCheckItem[];
+  lastUpdated: Date;
+  status: DocumentStatus;
+}
+
 export interface User {
   id: string;
   role: 'user';
@@ -9,7 +17,14 @@ export interface User {
   fullName?: string;
   password?: string;
   documentChecklists: UserDocumentChecklist[];
-  interactions: Interaction[];
+  services: CadastralService[]; // Добавляем поле services
+  interactions: {
+    id: string;
+    type: 'call' | 'chat' | 'office';
+    date: Date;
+    description: string;
+    adminId: string;
+  }[];
   isBlocked: boolean;
   blockReason?: string;
   lastVisit: Date;
@@ -17,24 +32,14 @@ export interface User {
   updatedAt: Date;
 }
 
-export interface Interaction {
-  id: string;
-  date: Date;
-  type: InteractionType;
-  description: string;
-  adminId: string;
-}
-
-export type InteractionType = 'call' | 'chat' | 'office';
-
-export interface CreateUserDto {
+export interface CreateUserRequest {
   email?: string;
   phone?: string;
   password: string;
   fullName?: string;
 }
 
-export interface UpdateUserDto {
+export interface UpdateUserRequest {
   email?: string;
   phone?: string;
   fullName?: string;
@@ -42,34 +47,9 @@ export interface UpdateUserDto {
   blockReason?: string;
 }
 
-export interface BlockUserDto {
-  isBlocked: boolean;
-  reason?: string;
-}
-
-export interface UserResponse {
-  id: string;
-  role: 'user';
-  email?: string;
-  phone?: string;
-  fullName?: string;
+export interface UserResponse extends Omit<User, 'password'> {
   documentChecklists: UserDocumentChecklist[];
-  interactions: Interaction[];
-  isBlocked: boolean;
-  blockReason?: string;
-  lastVisit: Date;
-  createdAt: Date;
-  updatedAt: Date;
-  commonDocumentsStatus: DocumentStatus;
-}
-
-export interface UserFilter {
-  search?: string;
-  isBlocked?: boolean;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-  page?: number;
-  limit?: number;
+  services: CadastralService[];
 }
 
 export interface UsersListResponse {
@@ -80,4 +60,14 @@ export interface UsersListResponse {
     limit: number;
     pages: number;
   };
+}
+
+// Типы для фильтрации и сортировки
+export interface UserFilter {
+  search?: string;
+  isBlocked?: boolean;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
 }
