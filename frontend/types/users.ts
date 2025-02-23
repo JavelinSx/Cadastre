@@ -1,7 +1,8 @@
-// types/user.ts
+// types/users.ts
 import type { DocumentStatus, DocumentCheckItem } from './documents';
-import type { CadastralService } from './cadastral';
+import type { CadastralService, ServiceStatus, CadastralServiceType } from './cadastral';
 
+// Чеклист документов пользователя
 export interface UserDocumentChecklist {
   serviceId: string;
   documents: DocumentCheckItem[];
@@ -9,6 +10,7 @@ export interface UserDocumentChecklist {
   status: DocumentStatus;
 }
 
+// Основная модель пользователя
 export interface User {
   id: string;
   role: 'user';
@@ -17,7 +19,7 @@ export interface User {
   fullName?: string;
   password?: string;
   documentChecklists: UserDocumentChecklist[];
-  services: CadastralService[]; // Добавляем поле services
+  services: CadastralService[];
   interactions: {
     id: string;
     type: 'call' | 'chat' | 'office';
@@ -32,6 +34,7 @@ export interface User {
   updatedAt: Date;
 }
 
+// Запросы для создания/обновления пользователя
 export interface CreateUserRequest {
   email?: string;
   phone?: string;
@@ -47,13 +50,54 @@ export interface UpdateUserRequest {
   blockReason?: string;
 }
 
+// Запросы для управления документами и услугами пользователей (для админа)
+export interface UpdateDocumentRequest {
+  type: string;
+  status: DocumentStatus;
+  comment?: string;
+}
+
+export interface UpdateServiceRequest {
+  id: string;
+  status: ServiceStatus;
+  comment?: string;
+}
+
+export interface UpdateServiceDocumentRequest {
+  serviceId: string;
+  documentType: string;
+  status: DocumentStatus;
+  comment?: string;
+}
+
+export interface UpdatePaymentRequest {
+  serviceId: string;
+  paid: boolean;
+}
+
+export interface AddServiceRequest {
+  type: CadastralServiceType;
+  price?: number;
+  comment?: string;
+}
+
+// Ответы API
 export interface UserResponse extends Omit<User, 'password'> {
   documentChecklists: UserDocumentChecklist[];
   services: CadastralService[];
 }
 
+export interface UpdateUserResponse {
+  id: string;
+  email?: string;
+  phone?: string;
+  fullName?: string;
+  documentChecklists: UserDocumentChecklist[];
+  services: CadastralService[];
+}
+
 export interface UsersListResponse {
-  users: UserResponse[];
+  users: User[];
   pagination: {
     total: number;
     page: number;
@@ -62,7 +106,7 @@ export interface UsersListResponse {
   };
 }
 
-// Типы для фильтрации и сортировки
+// Типы для фильтрации и состояния админ-стора
 export interface UserFilter {
   search?: string;
   isBlocked?: boolean;
@@ -70,4 +114,17 @@ export interface UserFilter {
   sortOrder?: 'asc' | 'desc';
   page?: number;
   limit?: number;
+}
+
+export interface AdminUsersState {
+  selectedUser: User | null;
+  users: User[];
+  loading: boolean;
+  error: string | null;
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
 }

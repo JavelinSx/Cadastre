@@ -18,17 +18,17 @@
         <ClientOnly>
             <UCard>
                 <template #header>
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-xl">Список пользователей</h2>
+                    <div class="flex flex-col justify-between items-center md:flex-row">
+                        <h2 class="text-xl mb-4">Список пользователей</h2>
                         <!-- Фильтры и поиск -->
-                        <div class="flex gap-4">
+                        <div class="flex flex-col md:flex-row gap-4">
                             <UInput v-model="searchQuery" placeholder="Поиск..."
                                 icon="i-heroicons-magnifying-glass-20-solid" class="w-64" />
                             <USelect v-model="filterStatus" :options="[
                                 { label: 'Все', value: 'all' },
                                 { label: 'Активные', value: 'active' },
                                 { label: 'Заблокированные', value: 'blocked' }
-                            ]" class="w-48" />
+                            ]" class="w-full md:w-48" />
                         </div>
                     </div>
                 </template>

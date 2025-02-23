@@ -7,6 +7,7 @@ import { ServiceStatus, CadastralServiceType } from '../types/cadastral';
 import { DocumentStatus } from '../types/documents';
 import { CadastralService, CadastralServiceDocument } from './shemas/cadastral-service.schema';
 import { CreateServiceDto, UpdateDocumentStatusDto, UpdateServiceStatusDto } from './dto';
+import { AddDocumentDto } from './dto/cadastral.add-doc.dto';
 
 @Injectable()
 export class CadastralServiceService {
@@ -23,15 +24,44 @@ export class CadastralServiceService {
   async findById(serviceId: string): Promise<CadastralServiceDocument | null> {
     return this.cadastralServiceModel.findById(serviceId).exec();
   }
+  // Добавление нового документа к услуге
+  async addServiceDocument(
+    serviceId: string,
+    addDocumentDto: AddDocumentDto,
+    adminId: string
+  ): Promise<CadastralServiceDocument> {
+    const service = await this.cadastralServiceModel.findById(serviceId);
+
+    if (!service) {
+      throw new NotFoundException('Услуга не найдена');
+    }
+
+    // Проверка наличия документа с таким же типом
+    const documentExists = service.documents.some((doc) => doc.type === addDocumentDto.type);
+    if (documentExists) {
+      throw new BadRequestException('Документ с таким названием уже существует');
+    }
+
+    // Добавляем новый документ в массив
+    service.documents.push({
+      type: addDocumentDto.type,
+      status: addDocumentDto.status,
+      isRequired: addDocumentDto.isRequired,
+      comment: addDocumentDto.comment,
+      verifiedAt: addDocumentDto.status === DocumentStatus.VERIFIED ? new Date() : undefined,
+      verifiedBy: addDocumentDto.status === DocumentStatus.VERIFIED ? adminId : undefined,
+      updatedAt: new Date(),
+    });
+
+    return service.save();
+  }
   // Создание новой услуги
   async createService(userId: string, createServiceDto: CreateServiceDto) {
-    // Получаем список необходимых документов для данного типа услуги
-    const requiredDocuments = this.getRequiredDocuments(createServiceDto.type);
-
+    // Больше не нужно обновлять документ пользователя
     const service = new this.cadastralServiceModel({
       userId,
       ...createServiceDto,
-      documents: requiredDocuments,
+      documents: this.getRequiredDocuments(createServiceDto.type),
       status: ServiceStatus.CONSULTATION,
     });
 
@@ -144,26 +174,28 @@ export class CadastralServiceService {
       updatedAt: new Date(),
     }));
   }
+  // Обновление цены услуги
+  async updateServicePrice(serviceId: string, price: number): Promise<CadastralService> {
+    const service = await this.cadastralServiceModel.findById(serviceId);
+
+    if (!service) {
+      throw new NotFoundException('Услуга не найдена');
+    }
+
+    // Проверяем корректность цены
+    if (price < 0) {
+      throw new BadRequestException('Стоимость не может быть отрицательной');
+    }
+
+    service.price = price;
+    return service.save();
+  }
 
   // Валидация перехода между статусами
   private validateStatusTransition(currentStatus: ServiceStatus, newStatus: ServiceStatus) {
-    const validTransitions = {
-      [ServiceStatus.CONSULTATION]: [ServiceStatus.DOCUMENTS_COLLECTION],
-      [ServiceStatus.DOCUMENTS_COLLECTION]: [ServiceStatus.OBJECT_SURVEY, ServiceStatus.REJECTED],
-      [ServiceStatus.OBJECT_SURVEY]: [ServiceStatus.DRAWING_PREPARATION, ServiceStatus.REJECTED],
-      [ServiceStatus.DRAWING_PREPARATION]: [ServiceStatus.PACKAGE_PREPARATION, ServiceStatus.REJECTED],
-      [ServiceStatus.PACKAGE_PREPARATION]: [ServiceStatus.AWAITING_RESPONSE, ServiceStatus.REJECTED],
-      [ServiceStatus.AWAITING_RESPONSE]: [ServiceStatus.READY_FOR_PAYMENT, ServiceStatus.REJECTED],
-      [ServiceStatus.REJECTED]: [
-        ServiceStatus.DOCUMENTS_COLLECTION,
-        ServiceStatus.OBJECT_SURVEY,
-        ServiceStatus.DRAWING_PREPARATION,
-      ],
-      [ServiceStatus.READY_FOR_PAYMENT]: [ServiceStatus.COMPLETED],
-    };
-
-    if (!validTransitions[currentStatus]?.includes(newStatus)) {
-      throw new BadRequestException(`Недопустимый переход из статуса ${currentStatus} в статус ${newStatus}`);
+    if (currentStatus === newStatus) {
+      throw new BadRequestException('Новый статус должен отличаться от текущего');
     }
+    return true;
   }
 }

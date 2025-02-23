@@ -1,17 +1,20 @@
 // users/users.service.ts
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, FilterQuery, SortOrder } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
-import { DocumentStatus, DocumentCheckItem, UserDocumentChecklist } from '../types/documents';
 import * as bcrypt from 'bcrypt';
 import { ServiceStatus } from 'types/cadastral';
 import { CreateServiceDto, UpdateServiceStatusDto } from 'cadastral/dto';
+import { InjectModel as InjectModelCadastral } from '@nestjs/mongoose';
+import { CadastralService, CadastralServiceDocument } from '../cadastral/shemas/cadastral-service.schema';
 
 @Injectable()
 export class UsersService {
-  cadastralServiceModel: any;
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModelCadastral(CadastralService.name) private cadastralServiceModel: Model<CadastralServiceDocument>
+  ) {}
 
   async findAll(
     filter: FilterQuery<UserDocument> = {},
@@ -48,39 +51,30 @@ export class UsersService {
     return user.save();
   }
 
+  // Теперь получаем услуги напрямую из коллекции услуг
   async getUserServices(userId: string) {
-    const user = await this.userModel
-      .findById(userId)
-      .populate({
-        path: 'services',
-        model: 'CadastralService',
-        options: { sort: { createdAt: -1 } },
-      })
-      .exec();
-
+    const user = await this.userModel.findById(userId);
     if (!user) {
       throw new NotFoundException('Пользователь не найден');
     }
 
-    return user.services;
+    return this.cadastralServiceModel.find({ userId }).sort({ createdAt: -1 }).exec();
   }
 
   // Получение конкретной услуги пользователя
   async getUserService(userId: string, serviceId: string) {
-    const user = await this.userModel
-      .findById(userId)
-      .populate({
-        path: 'services',
-        match: { _id: serviceId },
-        model: 'CadastralService',
-      })
-      .exec();
-
+    const user = await this.userModel.findById(userId);
     if (!user) {
       throw new NotFoundException('Пользователь не найден');
     }
 
-    const service = user.services.find((service) => service.id === serviceId);
+    const service = await this.cadastralServiceModel
+      .findOne({
+        _id: serviceId,
+        userId: userId,
+      })
+      .exec();
+
     if (!service) {
       throw new NotFoundException('Услуга не найдена');
     }
@@ -102,12 +96,7 @@ export class UsersService {
       status: ServiceStatus.CONSULTATION,
     });
 
-    const savedService = await newService.save();
-
-    // Добавляем ссылку на услугу в документ пользователя
-    await this.userModel.findByIdAndUpdate(userId, { $push: { services: savedService._id } });
-
-    return savedService;
+    return newService.save();
   }
 
   // Обновление статуса услуги
@@ -118,9 +107,13 @@ export class UsersService {
     }
 
     // Проверяем, что услуга принадлежит пользователю
-    const serviceExists = user.services.some((service) => service.id === serviceId);
-    if (!serviceExists) {
-      throw new BadRequestException('Услуга не принадлежит данному пользователю');
+    const service = await this.cadastralServiceModel.findOne({
+      _id: serviceId,
+      userId: userId,
+    });
+
+    if (!service) {
+      throw new BadRequestException('Услуга не найдена или не принадлежит данному пользователю');
     }
 
     // Обновляем статус услуги
@@ -135,10 +128,6 @@ export class UsersService {
       },
       { new: true }
     );
-
-    if (!updatedService) {
-      throw new NotFoundException('Услуга не найдена');
-    }
 
     return updatedService;
   }
@@ -174,10 +163,17 @@ export class UsersService {
       throw new NotFoundException('Пользователь не найден');
     }
 
-    // Удаляем ссылку на услугу из документа пользователя
-    await this.userModel.findByIdAndUpdate(userId, { $pull: { services: serviceId } });
+    // Проверяем принадлежность услуги пользователю
+    const service = await this.cadastralServiceModel.findOne({
+      _id: serviceId,
+      userId: userId,
+    });
 
-    // Удаляем саму услугу
+    if (!service) {
+      throw new BadRequestException('Услуга не найдена или не принадлежит данному пользователю');
+    }
+
+    // Удаляем услугу
     await this.cadastralServiceModel.findByIdAndDelete(serviceId);
 
     return { message: 'Услуга успешно удалена' };
@@ -191,15 +187,7 @@ export class UsersService {
     console.log('Service: поиск пользователя с ID:', id);
 
     try {
-      const user = await this.userModel
-        .findById(id)
-        .populate({
-          path: 'services',
-          options: { sort: { createdAt: -1 } },
-        })
-        .populate('documentChecklists.documents')
-        .exec();
-
+      const user = await this.userModel.findById(id).exec();
       console.log('Service: пользователь найден:', user ? 'да' : 'нет');
       return user;
     } catch (error) {
@@ -210,5 +198,66 @@ export class UsersService {
 
   async findByPhone(phone: string) {
     return this.userModel.findOne({ phone }).exec();
+  }
+
+  // Добавляем метод обновления пользователя
+  async update(id: string, updateData: Partial<User>): Promise<UserDocument | null> {
+    try {
+      const { phone, ...rest } = updateData;
+
+      // Форматируем данные перед обновлением
+      const formattedData = {
+        ...rest,
+        ...(phone && { phone: this.formatPhoneNumber(phone) }),
+      };
+
+      // Добавляем обработку ошибок при обновлении
+      const updatedUser = await this.userModel
+        .findByIdAndUpdate(
+          id,
+          { $set: formattedData },
+          {
+            new: true,
+            runValidators: true, // Включаем валидацию при обновлении
+          }
+        )
+        .exec();
+
+      return updatedUser;
+    } catch (error) {
+      // Логируем ошибку
+      console.error('Error in users.service.update:', error);
+
+      // Проверяем тип ошибки и перебрасываем соответствующее исключение
+      if (error.code === 11000) {
+        // Ошибка уникальности
+        throw new ConflictException('Пользователь с такими данными уже существует');
+      }
+
+      throw error;
+    }
+  }
+
+  private formatPhoneNumber(phone: string): string {
+    try {
+      // Очищаем от всех не-цифр
+      const cleaned = phone.replace(/\D/g, '');
+
+      // Если номер начинается с 8, заменяем на 7
+      if (cleaned.startsWith('8')) {
+        return '7' + cleaned.slice(1);
+      }
+
+      // Если номер уже начинается с 7, оставляем как есть
+      if (cleaned.startsWith('7')) {
+        return cleaned;
+      }
+
+      // В других случаях добавляем 7 в начало
+      return '7' + cleaned;
+    } catch (error) {
+      console.error('Error formatting phone number:', error);
+      throw new BadRequestException('Неверный формат номера телефона');
+    }
   }
 }

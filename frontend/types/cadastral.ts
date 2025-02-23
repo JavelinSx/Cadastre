@@ -41,13 +41,15 @@ export interface CreateServiceRequest {
   comment?: string;
 }
 
-export interface UpdateServiceStatusRequest {
-  status: ServiceStatus;
+export interface AddDocumentDto {
+  type: string;
+  isRequired?: boolean;
   comment?: string;
+  status: DocumentStatus;
 }
 
-export interface UpdateServiceDocumentRequest {
-  status: DocumentStatus;
+export interface UpdateServiceStatusRequest {
+  status: ServiceStatus;
   comment?: string;
 }
 

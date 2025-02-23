@@ -5,11 +5,22 @@ import { AdminAuthGuard } from '../guards/admin-auth.guard';
 import { UserAuthGuard } from '../guards/user-auth.guard';
 import { CadastralServiceService } from './cadastral.service';
 import { CreateServiceDto, UpdateDocumentStatusDto, UpdateServiceStatusDto } from './dto';
+import { AddDocumentDto } from './dto/cadastral.add-doc.dto';
 
 @Controller('cadastral')
 export class CadastralController {
   constructor(private readonly cadastralService: CadastralServiceService) {}
-
+  // Изменение цены услуги
+  @Patch('services/:serviceId/price')
+  @UseGuards(AdminAuthGuard)
+  async updateServicePrice(@Param('serviceId') serviceId: string, @Body('price') price: number) {
+    try {
+      const updatedService = await this.cadastralService.updateServicePrice(serviceId, price);
+      return updatedService;
+    } catch (error) {
+      throw new BadRequestException(error.message || 'Ошибка при обновлении стоимости услуги');
+    }
+  }
   // Получение всех услуг пользователя
   @Get('users/:userId/services')
   @UseGuards(AdminAuthGuard)
@@ -17,6 +28,11 @@ export class CadastralController {
     return this.cadastralService.getUserServices(userId);
   }
 
+  @Post('services/:serviceId/documents')
+  @UseGuards(AdminAuthGuard)
+  async addServiceDocument(@Param('serviceId') serviceId: string, @Body() addDocumentDto: AddDocumentDto, @Req() req) {
+    return this.cadastralService.addServiceDocument(serviceId, addDocumentDto, req.user.id);
+  }
   // Создание новой услуги для пользователя (только админ)
   @Post('users/:userId/services')
   @UseGuards(AdminAuthGuard)

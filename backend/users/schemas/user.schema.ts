@@ -40,17 +40,6 @@ export class User {
   @Prop()
   fullName?: string;
 
-  @Prop({
-    type: [
-      {
-        type: MongooseSchema.Types.ObjectId,
-        ref: 'CadastralService',
-      },
-    ],
-    default: [],
-  })
-  services: CadastralService[];
-
   @Prop({ default: Date.now })
   lastVisit: Date;
 }

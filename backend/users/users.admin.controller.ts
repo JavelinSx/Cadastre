@@ -11,52 +11,80 @@ import {
   Query,
   NotFoundException,
   Param,
+  Patch,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { AdminAuthGuard } from '../guards/admin-auth.guard';
 import { UserDocument } from './schemas/user.schema';
 import { FilterQuery } from 'mongoose';
+import { CadastralServiceService } from 'cadastral/cadastral.service';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('admin/users')
 @UseGuards(AdminAuthGuard)
 export class UsersAdminController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly cadastralService: CadastralServiceService
+  ) {}
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    try {
+      // Проверяем существование пользователя
+      const existingUser = await this.usersService.findById(id);
+      if (!existingUser) {
+        throw new NotFoundException('Пользователь не найден');
+      }
+
+      // Если меняется email или телефон, проверяем их уникальность
+      if (updateUserDto.email) {
+        const userWithEmail = await this.usersService.findByEmail(updateUserDto.email);
+        if (userWithEmail && userWithEmail.id !== id) {
+          throw new ConflictException('Пользователь с таким email уже существует');
+        }
+      }
+
+      if (updateUserDto.phone) {
+        const userWithPhone = await this.usersService.findByPhone(updateUserDto.phone);
+        if (userWithPhone && userWithPhone.id !== id) {
+          throw new ConflictException('Пользователь с таким телефоном уже существует');
+        }
+      }
+
+      const user = await this.usersService.update(id, updateUserDto);
+      if (!user) {
+        throw new NotFoundException('Пользователь не найден');
+      }
+
+      return user;
+    } catch (error) {
+      // Логируем ошибку для отладки
+      console.error('Error updating user:', error);
+
+      if (error instanceof NotFoundException || error instanceof ConflictException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(error.message || 'Ошибка при обновлении пользователя');
+    }
+  }
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    console.log('Controller: получен запрос для ID:', id);
-
     try {
       const user = await this.usersService.findById(id);
 
       if (!user) {
         throw new NotFoundException('Пользователь не найден');
       }
-
-      // Важно: преобразуем и проверим данные
-      const userData = user.toJSON();
-      console.log('Controller: данные пользователя:', userData);
+      const services = await this.cadastralService.getUserServices(id);
 
       return {
-        id: userData._id || userData.id,
-        fullName: userData.fullName,
-        email: userData.email,
-        phone: userData.phone,
-        documentChecklists: userData.documentChecklists || [],
-        services: userData.services || [],
+        ...user.toJSON(),
+        services,
       };
     } catch (error) {
-      console.error('Controller: ошибка:', error);
-
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-
-      if (error.name === 'CastError') {
-        throw new BadRequestException('Неверный формат ID');
-      }
-
-      throw new InternalServerErrorException('Произошла ошибка при получении пользователя');
+      throw new InternalServerErrorException('Ошибка при получении данных пользователя');
     }
   }
   @Post()

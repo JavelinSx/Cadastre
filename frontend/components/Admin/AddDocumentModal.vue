@@ -1,19 +1,22 @@
-// components/admin/users/AddServiceModal.vue
+// components/admin/cadastral/AddDocumentModal.vue
 <template>
     <UModal v-model="isOpen">
         <UCard>
             <template #header>
-                <h3 class="text-xl">Добавить кадастровую услугу</h3>
+                <h3 class="text-xl">Добавить документ</h3>
             </template>
 
             <form @submit.prevent="handleSubmit" class="space-y-4">
-                <UFormGroup label="Тип услуги" name="type" required>
-                    <USelect v-model="formData.type" :options="serviceTypeOptions" placeholder="Выберите тип услуги" />
+                <UFormGroup label="Название документа" name="type" required>
+                    <UInput v-model="formData.type" placeholder="Введите название документа" />
                 </UFormGroup>
 
-                <UFormGroup label="Стоимость" name="price">
-                    <UInput v-model.number="formData.price" type="number" min="0" step="100"
-                        placeholder="Введите стоимость" />
+                <UFormGroup label="Обязательный" name="isRequired">
+                    <UCheckbox v-model="formData.isRequired" label="Документ обязателен" />
+                </UFormGroup>
+
+                <UFormGroup label="Статус документа" name="status">
+                    <USelect v-model="formData.status" :options="documentStatusOptions" placeholder="Выберите статус" />
                 </UFormGroup>
 
                 <UFormGroup label="Комментарий" name="comment">
@@ -37,17 +40,23 @@
 import { ref, computed, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useAdminCadastralStore } from '~/stores/admin/cadastral'
-import { CadastralServiceType } from '~/types/cadastral'
+import { DocumentStatus } from '~/types/documents'
 
 interface FormData {
-    type: CadastralServiceType | ''
-    price: number | null
+    type: string
+    isRequired: boolean
+    status: DocumentStatus | ''
     comment: string
 }
 
 const props = defineProps<{
-    userId: string
+    serviceId: string
     modelValue: boolean
+}>()
+
+const emit = defineEmits<{
+    'update:modelValue': [value: boolean]
+    'document-added': []
 }>()
 
 const toast = useToast()
@@ -57,24 +66,24 @@ const isOpen = ref(props.modelValue)
 
 const formData = ref<FormData>({
     type: '',
-    price: null,
+    isRequired: true,
+    status: DocumentStatus.PENDING,
     comment: ''
 })
 
-const serviceTypeOptions = [
-    { label: 'Межевание земельного участка', value: CadastralServiceType.LAND_SURVEY },
-    { label: 'Технический план здания', value: CadastralServiceType.BUILDING_PLAN },
-    { label: 'Технический план помещения', value: CadastralServiceType.ROOM_PLAN },
-    { label: 'Акт обследования', value: CadastralServiceType.INSPECTION_ACT },
-    { label: 'Схема расположения ЗУ', value: CadastralServiceType.LAND_LAYOUT }
+const documentStatusOptions = [
+    { label: 'Ожидает проверки', value: DocumentStatus.PENDING },
+    { label: 'Проверен', value: DocumentStatus.VERIFIED },
+    { label: 'Отклонен', value: DocumentStatus.REJECTED }
 ] as const
 
-const isValid = computed(() => Boolean(formData.value.type))
+const isValid = computed(() => Boolean(formData.value.type && formData.value.status))
 
 const resetForm = () => {
     formData.value = {
         type: '',
-        price: null,
+        isRequired: true,
+        status: DocumentStatus.PENDING,
         comment: ''
     }
 }
@@ -82,23 +91,26 @@ const resetForm = () => {
 const handleClose = () => {
     resetForm()
     isOpen.value = false
+    emit('update:modelValue', false)
 }
 
 const handleSubmit = async () => {
-    if (!formData.value.type) return
+    if (!formData.value.type || !formData.value.status) return
 
     loading.value = true
     try {
-        await cadastralStore.addUserService(props.userId, {
+        await cadastralStore.addServiceDocument(props.serviceId, {
             type: formData.value.type,
-            price: formData.value.price || undefined,
+            isRequired: formData.value.isRequired,
+            status: formData.value.status,
             comment: formData.value.comment || undefined
         })
 
-        toast.success('Услуга успешно добавлена')
+        toast.success('Документ успешно добавлен')
+        emit('document-added')
         handleClose()
     } catch (error: any) {
-        toast.error(error.message || 'Ошибка при добавлении услуги')
+        toast.error(error.message || 'Ошибка при добавлении документа')
     } finally {
         loading.value = false
     }
@@ -112,6 +124,7 @@ watch(() => props.modelValue, (newValue) => {
 // Сброс формы при закрытии модального окна
 watch(() => isOpen.value, (newValue) => {
     if (!newValue) {
+        emit('update:modelValue', false)
         resetForm()
     }
 })

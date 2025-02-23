@@ -2,79 +2,84 @@
 import { defineStore } from 'pinia';
 
 import type { DocumentStatus, DocumentCheckItem } from '~/types/documents';
-import type { ServiceStatus, CadastralServiceType, CadastralService } from '~/types/cadastral';
-import type { User, UserDocumentChecklist } from '~/types/users';
+import type { CadastralService } from '~/types/cadastral';
+import type {
+  AddServiceRequest,
+  AdminUsersState,
+  UpdateDocumentRequest,
+  UpdatePaymentRequest,
+  UpdateServiceDocumentRequest,
+  UpdateServiceRequest,
+  UpdateUserRequest,
+  UpdateUserResponse,
+  User,
+  UsersListResponse,
+} from '~/types/users';
 import { useApi } from '~/composables/useApi';
-
-// Интерфейс состояния стора
-interface AdminUsersState {
-  selectedUser: User | null;
-  loading: boolean;
-  error: string | null;
-}
-
-// Интерфейсы для запросов к API
-interface UpdateUserRequest {
-  fullName?: string;
-  email?: string;
-  phone?: string;
-}
-
-interface UpdateDocumentRequest {
-  type: string;
-  status: DocumentStatus;
-  comment?: string;
-}
-
-interface UpdateServiceRequest {
-  id: string;
-  status: ServiceStatus;
-  comment?: string;
-}
-
-interface UpdateServiceDocumentRequest {
-  serviceId: string;
-  documentType: string;
-  status: DocumentStatus;
-  comment?: string;
-}
-
-interface UpdatePaymentRequest {
-  serviceId: string;
-  paid: boolean;
-}
-
-interface AddServiceRequest {
-  type: CadastralServiceType;
-  price?: number;
-  comment?: string;
-}
-
-// Интерфейсы для ответов API
-interface UpdateUserResponse {
-  id: string;
-  email?: string;
-  phone?: string;
-  fullName?: string;
-  documentChecklists: UserDocumentChecklist[];
-  services: CadastralService[];
-}
 
 export const useAdminUsersStore = defineStore('admin/users', {
   state: (): AdminUsersState => ({
     selectedUser: null,
+    users: [],
     loading: false,
     error: null,
+    pagination: {
+      total: 0,
+      page: 1,
+      limit: 10,
+      pages: 0,
+    },
   }),
 
   actions: {
+    async updateUser(id: string, userData: UpdateUserRequest): Promise<User> {
+      try {
+        const { fetchApi } = useApi();
+        const updatedUser = await fetchApi<User>(`/api/admin/users/${id}`, {
+          method: 'PATCH',
+          body: userData,
+        });
+
+        return updatedUser;
+      } catch (error: any) {
+        console.error('Ошибка при обновлении пользователя:', error);
+        throw error;
+      }
+    },
+    async fetchUsers(params = {}) {
+      this.loading = true;
+      this.error = null;
+
+      try {
+        const { fetchApi } = useApi();
+        const response = await fetchApi<UsersListResponse>('/api/admin/users', {
+          method: 'GET',
+          params,
+          withCredentials: true,
+        });
+
+        if (response && response.users) {
+          this.users = response.users;
+          this.pagination = response.pagination || this.pagination;
+        } else {
+          this.users = [];
+        }
+
+        return response;
+      } catch (error: any) {
+        console.error('Error fetching users:', error);
+        this.error = error.message || 'Ошибка при загрузке пользователей';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
     async fetchUserById(id: string) {
       this.loading = true;
       this.error = null;
 
       try {
         const { fetchApi } = useApi();
-        console.log('Fetching user with ID:', id); // Отладочный лог
 
         const user = await fetchApi<User>(`/api/admin/users/${id}`, {
           method: 'GET',
@@ -84,7 +89,6 @@ export const useAdminUsersStore = defineStore('admin/users', {
         this.selectedUser = user;
         return user;
       } catch (error: any) {
-        console.error('Error fetching user:', error); // Отладочный лог
         this.error = error.message || 'Ошибка при загрузке пользователя';
         throw error;
       } finally {

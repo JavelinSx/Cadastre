@@ -1,7 +1,7 @@
 // stores/admin/cadastral.ts
 import { defineStore } from 'pinia';
 import { useApi } from '~/composables/useApi';
-import type { CadastralService, CadastralServiceType, ServiceStatus } from '~/types';
+import type { AddDocumentDto, CadastralService, CadastralServiceType, ServiceStatus } from '~/types';
 import type { DocumentStatus } from '~/types/documents';
 
 interface CadastralState {
@@ -32,6 +32,34 @@ export const useAdminCadastralStore = defineStore('admin/cadastral', {
       state.services.filter((service) => service.status !== 'completed' && service.status !== 'rejected'),
   },
   actions: {
+    async updateServicePrice(serviceId: string, price: number) {
+      try {
+        const { fetchApi } = useApi();
+        const updatedService = await fetchApi<CadastralService>(`/api/cadastral/services/${serviceId}/price`, {
+          method: 'PATCH',
+          body: { price },
+        });
+        return updatedService;
+      } catch (error) {
+        throw error;
+      }
+    },
+    async addServiceDocument(serviceId: string, document: AddDocumentDto): Promise<CadastralService> {
+      const { fetchApi } = useApi();
+
+      try {
+        const response = await fetchApi<CadastralService>(`/api/cadastral/services/${serviceId}/documents`, {
+          method: 'POST',
+          body: document,
+          withCredentials: true,
+        });
+
+        return response;
+      } catch (error: any) {
+        console.error('Ошибка при добавлении документа:', error);
+        throw error;
+      }
+    },
     async addUserService(
       userId: string,
       serviceData: {

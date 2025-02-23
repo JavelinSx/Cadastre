@@ -7,11 +7,11 @@
 
         <template v-else>
             <!-- Заголовок и кнопка добавления услуги -->
-            <div class="mb-6 flex items-center justify-between">
-                <h1 class="text-2xl font-semibold">
-                    Профиль пользователя {{ selectedUser?.fullName || 'Без имени' }}
+            <div class="mb-6 flex-col md: flex-ro items-center justify-between">
+                <h1 class="text-2xl font-semibold mb-2">
+                    Профиль пользователя:
                 </h1>
-                <UButton color="primary" @click="isAddServiceModalOpen = true">
+                <UButton class="w-full mt-4" color="primary" @click="isAddServiceModalOpen = true">
                     Добавить услугу
                 </UButton>
             </div>
@@ -20,9 +20,7 @@
             <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
                 <UserInfoCard :user="selectedUser" />
 
-                <CommonDocumentsCard :user-id="userId" :documents="commonDocuments" />
-
-                <CadastralServicesList :services="services" :user-id="userId" />
+                <CadastralServicesList :user-id="userId" />
             </div>
 
             <!-- Модальное окно добавления услуги -->
@@ -40,7 +38,6 @@ import { useAdminUsersStore } from '~/stores/admin/users'
 import { useAdminCadastralStore } from '~/stores/admin/cadastral'
 import AddServiceModal from '~/components/Admin/AddServiceModal.vue'
 import CadastralServicesList from '~/components/Admin/CadastralServicesList.vue'
-import CommonDocumentsCard from '~/components/Admin/CommonDocumentsCard.vue'
 import UserInfoCard from '~/components/Admin/UserInfoCard.vue'
 import LoadingSpinner from '~/components/UI/LoadingSpinner.vue'
 

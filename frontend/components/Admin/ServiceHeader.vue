@@ -1,28 +1,15 @@
-// components/admin/users/ServiceHeader.vue
 <template>
-    <div class="flex justify-between items-start mb-4">
-        <div>
-            <h3 class="text-lg font-medium">{{ getServiceTypeName(service.type) }}</h3>
-            <p class="text-sm text-gray-500">
-                Создано: {{ formatDate(service.createdAt) }}
-            </p>
-            <p v-if="service.completedAt" class="text-sm text-green-600">
-                Завершено: {{ formatDate(service.completedAt) }}
-            </p>
-            <p v-if="service.comment" class="text-sm text-gray-600 mt-1">
-                {{ service.comment }}
-            </p>
-        </div>
-
-        <div class="flex items-center gap-4">
-            <UBadge v-if="!service.payment" color="red" variant="subtle">
-                Не оплачено
-            </UBadge>
-            <UBadge v-if="service.price" color="blue" variant="subtle">
-                {{ formatPrice(service.price) }}
-            </UBadge>
+    <div class="flex flex-col md:flex-row justify-between items-start mb-4">
+        <div class="mt-4">
+            <p>Текущий статус услуги:</p>
             <USelect v-model="status" :options="serviceStatusOptions"
                 @update:model-value="(newStatus: ServiceStatus) => handleStatusChange(newStatus)" />
+
+            <div class="flex flex-col justify-between w-full mt-4 gap-2">
+                <ServicePriceControl :service="service" @update="handleServiceUpdate" />
+
+                <ServicePaymentStatus :service="service" @update="handleServiceUpdate" />
+            </div>
         </div>
     </div>
 </template>
@@ -33,19 +20,28 @@ import { useToast } from 'vue-toastification'
 import { useAdminCadastralStore } from '~/stores/admin/cadastral'
 import type { CadastralService } from '~/types/cadastral'
 import { ServiceStatus, CadastralServiceType } from '~/types/cadastral'
-import { formatDate, formatPrice } from '~/utils/formatters'
+import ServicePaymentStatus from './ServicePaymentStatus.vue'
+import ServicePriceControl from './ServicePriceControl .vue'
 
 const props = defineProps<{
     service: CadastralService
 }>()
 
-const toast = useToast()
-const cadastralStore = useAdminCadastralStore()
-const status = ref<ServiceStatus>(props.service.status)
+const emit = defineEmits<{
+    update: [service: CadastralService]
+}>()
+
+const handleServiceUpdate = (updatedService: CadastralService) => {
+    emit('update', updatedService)
+}
+
+const toast = useToast();
+const cadastralStore = useAdminCadastralStore();
+const status = ref<ServiceStatus>(props.service.status);
 
 watch(() => props.service.status, (newStatus) => {
-    status.value = newStatus
-})
+    status.value = newStatus;
+});
 
 const serviceStatusOptions = [
     { label: 'Первичная консультация', value: ServiceStatus.CONSULTATION },
@@ -57,7 +53,7 @@ const serviceStatusOptions = [
     { label: 'Отказ Росреестра', value: ServiceStatus.REJECTED },
     { label: 'Готово к выдаче', value: ServiceStatus.COMPLETED },
     { label: 'Ожидает оплаты', value: ServiceStatus.READY_FOR_PAYMENT }
-] as const
+] as const;
 
 const serviceTypeNames: Record<CadastralServiceType, string> = {
     [CadastralServiceType.LAND_SURVEY]: 'Межевание земельного участка',
@@ -65,19 +61,24 @@ const serviceTypeNames: Record<CadastralServiceType, string> = {
     [CadastralServiceType.ROOM_PLAN]: 'Технический план помещения',
     [CadastralServiceType.INSPECTION_ACT]: 'Акт обследования',
     [CadastralServiceType.LAND_LAYOUT]: 'Схема расположения ЗУ'
-}
+};
 
 const getServiceTypeName = (type: CadastralServiceType): string => {
-    return serviceTypeNames[type]
-}
+    return serviceTypeNames[type];
+};
 
 const handleStatusChange = async (newStatus: ServiceStatus): Promise<void> => {
     try {
-        await cadastralStore.updateServiceStatus(props.service.id, newStatus)
-        toast.success('Статус услуги успешно обновлен')
+        const updatedService = await cadastralStore.updateServiceStatus(props.service.id, newStatus);
+        toast.success('Статус услуги успешно обновлен');
+
+        // Уведомляем родительский компонент об обновлении
+        if (updatedService) {
+            emit('update', updatedService);
+        }
     } catch (error: any) {
-        toast.error(error.message || 'Ошибка при обновлении статуса услуги')
-        status.value = props.service.status
+        toast.error(error.message || 'Ошибка при обновлении статуса услуги');
+        status.value = props.service.status;
     }
-}
+};
 </script>
